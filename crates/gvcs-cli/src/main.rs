@@ -1,3 +1,5 @@
+mod ui;
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use colored::*;
@@ -44,6 +46,12 @@ enum Commands {
     },
     /// Inspect Marketplace blueprints, handwritten `@native` modules, decisions, and bug guards.
     Inspect,
+    /// Launch the universal `gvcs ui` Feature Map & Code Provenance Explorer in your browser (default: http://127.0.0.1:4400).
+    Ui {
+        /// Host and port to bind the universal `gvcs ui` inspector.
+        #[arg(long, default_value = "127.0.0.1:4400")]
+        addr: String,
+    },
 }
 
 fn resolve_project_root(cli_path: Option<PathBuf>) -> PathBuf {
@@ -73,6 +81,7 @@ fn main() -> Result<()> {
         Commands::Slice { feature } => cmd_slice(&ws, &feature),
         Commands::WhatIf { remove } => cmd_what_if(&ws, &remove),
         Commands::Inspect => cmd_inspect(&ws),
+        Commands::Ui { addr } => ui::serve_gvcs_ui(&root, &addr),
     }
 }
 

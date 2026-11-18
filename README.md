@@ -89,13 +89,16 @@ gvcs status — examples/todo-app (lock: 082a91bc ✓ synced)
       Features:  cap:web-ui + feat:tags-and-search + feat:todo-crud + native:priority-decay
 ```
 
-### 2. Launch the Live Todo Web App (`todo-app serve`)
+### 2. Launch the Universal Visual Feature Explorer (`gvcs ui`) & Todo Web App
 ```bash
+# 1. Open the universal gvcs Feature Map & Provenance Explorer (works on ANY project, like gitk):
+cargo run -p gvcs-cli -- ui --addr 127.0.0.1:4400
+
+# 2. Or launch the example Todo Web App itself at http://127.0.0.1:8080:
 cargo run -p todo-app -- serve --addr 127.0.0.1:8080
 ```
-Open **`http://127.0.0.1:8080`** in your browser to add tasks with inline `#tags` and recurrence, filter by tag or keyword with sub-25ms cache telemetry, complete recurring tasks, and trigger 1-click GDPR JSON export & erasure.
-
-*(Want a sub-second terminal walkthrough without opening a browser? Run `cargo run -p todo-app -- demo`).*
+* **`gvcs ui` (`http://127.0.0.1:4400`)** is a universal developer tool built into `gvcs-cli`—it reads `specs/`, `provenance.lock`, and `src/` directly so you can click any feature in the sidebar to inspect its linked code blocks, decisions, bug guards, and `[DELETE]` vs. `[SIMPLIFY]` removal blast radius (zero coupling to the target app's UI!).
+* **`todo-app serve` (`http://127.0.0.1:8080`)** runs the clean, realistic Todo Web App (or run `cargo run -p todo-app -- demo` for a <1s terminal walkthrough).
 
 ### 3. Slice the Codebase by Any Feature (`gvcs slice`)
 ```bash
