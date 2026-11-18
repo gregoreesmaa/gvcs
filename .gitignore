@@ -2,3 +2,5 @@
 **/*.rs.bk
 .DS_Store
 Thumbs.db
+.todo-db.json
+

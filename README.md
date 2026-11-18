@@ -44,7 +44,8 @@ gvcs/
         │   ├── features/
         │   │   ├── 001-todo-crud.feature          # L0 Domain: Core task creation & completion
         │   │   ├── 002-recurring-tasks.feature    # L0 Domain: Recurring task roll-forward [CANARY(25%)]
-        │   │   └── 003-priority-scoring.feature   # L0 Domain: @native Rust urgency decay kernel
+        │   │   ├── 003-priority-scoring.feature   # L0 Domain: @native Rust urgency decay kernel
+        │   │   └── 004-tags-and-search.feature    # L0 Domain: Inline #tags, search & filtered views
         │   ├── capabilities/
         │   │   ├── google-login.cap               # L1 Policy: @marketplace/google-oauth-identity@2.4.0
         │   │   ├── gdpr-privacy.cap               # L1 Policy: @marketplace/eu-gdpr-privacy-safe@3.1.0
@@ -52,32 +53,49 @@ gvcs/
         │   │   └── fast-cache-sla.cap             # L3 Envelope: Sub-25ms write-through memory cache
         │   ├── exceptions/
         │   │   ├── pareto-001-cache-vs-gdpr.pareto.toml     # Resolves L3 Cache vs L1 GDPR 0ms erasure conflict
-        │   │   └── exc-002-crud-vs-recurring.exception.toml # Resolves shared DBTable:todos mutation ordering
+        │   │   ├── exc-002-crud-vs-recurring.exception.toml # Resolves shared DBTable:todos mutation ordering
+        │   │   ├── exc-003-crud-vs-tags.exception.toml      # Resolves inline #tag extraction on creation
+        │   │   └── exc-004-recurring-vs-tags.exception.toml # Carries #tags forward to spawned recurring tasks
         │   └── incidents/
         │       └── inc-001-double-complete.incident.toml    # 3 AM retry bug lifted to Negative Invariant test
         ├── src/
         │   ├── lib.rs                             # Fused Rust implementation with @gvcs-begin/end cell spans
         │   ├── native_priority.rs                 # Sealed @native urgency scoring kernel
-        │   └── main.rs                            # Runnable Todo App demo
+        │   └── main.rs                            # Interactive CLI Todo App (add, list, done, delete, gdpr-erase, demo)
         └── provenance.lock                        # Cryptographic Merkle lock mapping I(A ∩ B) <-> src/ spans
 ```
 
 ---
 
-## 4. Quickstart & CLI Walkthrough
+## 4. Quickstart: Build & Run in Under 5 Minutes
 
-### 1. Run the Complete Test & Invariant Suite
+### 1. Run the Interactive Todo App CLI (`todo-app`)
+The reference Todo application is a real, persistent CLI app (`add`, `list`, `done`, `delete`, `gdpr-erase`, `demo`) backed by a disk JSON database (`.todo-db.json`) and in-memory write-through read cache:
+
+```bash
+# Run the full 4-step showcase across all 8 intersecting features:
+cargo run -p todo-app -- demo
+
+# Or use the persistent CLI directly:
+cargo run -p todo-app -- add "Ship gvcs 1.0 #rust #release" --priority 5 --overdue-hours 2 --recur-days 7
+cargo run -p todo-app -- add "Buy espresso beans #home" --priority 2 --overdue-hours -12
+cargo run -p todo-app -- list --tag rust
+cargo run -p todo-app -- done 1
+cargo run -p todo-app -- gdpr-erase --confirm
+```
+
+### 2. Run the Complete Test & Invariant Suite
 ```bash
 cargo test --workspace
 ```
 
-### 2. Inspect the $N$-Dimensional Feature Hypergraph (`gvcs status`)
+### 3. Inspect the $N$-Dimensional Feature Hypergraph (`gvcs status`)
 ```bash
 cargo run -p gvcs-cli -- status
 ```
-Displays all 7 stratified Feature Vectors ($L_0 \to L_3$), their lifecycle gates (`GA`, `CANARY(25%)`), all 27 resolved Intersection Cells ($I_{A \cap B}$), and the Pareto Tradeoff Pins ($\mathcal{E}$).
+Displays all 8 stratified Feature Vectors ($L_0 \to L_3$), their lifecycle gates (`GA`, `CANARY(25%)`), all 37 resolved Intersection Cells ($I_{A \cap B}$), and the 4 Pareto/Exception Pins ($\mathcal{E}$).
 
-### 3. Verify Adherence, Pareto Pins & 3 AM Hotfix Drift (`gvcs check`)
+### 4. Verify Adherence, Pareto Pins & 3 AM Hotfix Drift (`gvcs check`)
 ```bash
 cargo run -p gvcs-cli -- check
 ```
@@ -86,19 +104,14 @@ Verifies that:
 2. Every `@gvcs-begin` code span in `src/` matches its locked SHA-256 digest in `provenance.lock` (or carries an active 72-hour `.incident` Tourniquet Pin).
 3. All historical `.incident` records have been lifted into permanent Negative Invariant tests.
 
-### 4. Slice the Codebase by Any Feature or Horizontal Policy (`gvcs slice`)
+### 5. Slice the Codebase by Any Feature or Horizontal Policy (`gvcs slice`)
 ```bash
 cargo run -p gvcs-cli -- slice gdpr-privacy
 ```
-Instantly locates every Intersection Cell (`I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)`) and the exact lines of Rust code in `src/lib.rs` (lines 207..236) and verification tests that exist because of `gdpr-privacy`.
+Instantly locates every Intersection Cell (`I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)`) and the exact lines of Rust code in `src/lib.rs` and verification tests that exist because of `gdpr-privacy`.
 
-### 5. Simulate Feature Removal / Deprecation Blast Radius (`gvcs what-if`)
+### 6. Simulate Feature Removal / Deprecation Blast Radius (`gvcs what-if`)
 ```bash
 cargo run -p gvcs-cli -- what-if --remove recurring-tasks
 ```
-Shows the exact 7 Intersection Cells and 1 fused code span (`TodoStore::complete_todo`) affected by removing `recurring-tasks`, while proving via SHA-256 lock that the other 7 code spans across the repository remain 100% untouched.
-
-### 6. Run the Materialized Todo App Example
-```bash
-cargo run -p todo-app
-```
+Shows the exact Intersection Cells and fused code span (`TodoStore::complete_todo`) affected by removing `recurring-tasks`, while proving via SHA-256 lock that the other 7 code spans across the repository remain 100% untouched.

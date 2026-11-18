@@ -1,0 +1,11 @@
+id = "EXC-003-crud-vs-tags"
+features = ["feat:tags-and-search", "feat:todo-crud"]
+conflict_summary = "Both 'Users can create, list, and complete todo tasks' and 'Users can organize tasks with project tags, search keywords, and filter views' mutate shared substrate [\"DBTable:todos\", \"Viewport:TodoList\"]."
+chosen_option = "OPT-INLINE-TAG-EXTRACTION"
+resolution_directive = "Normalize and deduplicate #tags directly inside TodoItem creation and fuse tag/keyword filtering into the cached list query pipeline."
+
+[[options]]
+option_id = "OPT-INLINE-TAG-EXTRACTION"
+label = "Inline Tag Extraction & Fused Filter Pipeline (Recommended)"
+business_impact = "Users can pass tags explicitly or inline (`#work`), and filtering happens prior to urgency sorting."
+estimated_cost_or_latency = "0ms extra round-trip"

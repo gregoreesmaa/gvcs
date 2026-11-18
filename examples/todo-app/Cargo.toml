@@ -12,6 +12,7 @@ serde_json.workspace = true
 chrono.workspace = true
 sha2.workspace = true
 hex.workspace = true
-
-[dev-dependencies]
+clap.workspace = true
+colored.workspace = true
+anyhow.workspace = true
 gvcs-core = { path = "../../crates/gvcs-core" }

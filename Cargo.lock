@@ -602,7 +602,10 @@ dependencies = [
 name = "todo-app"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "chrono",
+ "clap",
+ "colored",
  "gvcs-core",
  "hex",
  "serde",

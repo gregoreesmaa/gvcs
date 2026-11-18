@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "graph_state_hash": "256689a033999e9e6bf0d8a0240d8fe52aae5b125e35f95aac3e22cf6721d2ea",
+  "graph_state_hash": "c794ca37cd23adec2a8bd22dac62462b1c529af7702d1fb56a24c29d70580650",
   "features": {
     "cap:cli-ux-shell": {
       "id": "cap:cli-ux-shell",
@@ -130,6 +130,30 @@
       ],
       "spec_digest": "6bfce43e89fe7ed86fcda1cb01817e8cf84317eccc18469ab6d26a8fd23b15ae"
     },
+    "feat:tags-and-search": {
+      "id": "feat:tags-and-search",
+      "title": "Users can organize tasks with project tags, search keywords, and filter views",
+      "spec_path": "specs/features/004-tags-and-search.feature",
+      "kind": "feature",
+      "stratum": "L0Domain",
+      "lifecycle": {
+        "state": "GA"
+      },
+      "ontology_tags": [
+        "mutable_state",
+        "persistent_storage",
+        "read_query"
+      ],
+      "substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "quantifiers": [],
+      "scenarios": [
+        "User filters todo board by project tag or keyword"
+      ],
+      "spec_digest": "b4e48d42798959d90bfc8462a0ef9bbd4fcf677099da837258d536e3d091aaad"
+    },
     "feat:todo-crud": {
       "id": "feat:todo-crud",
       "title": "Users can create, list, and complete todo tasks",
@@ -237,15 +261,31 @@
       "applied_pins": [],
       "incident_guards": []
     },
-    "I(cap:cli-ux-shell ∩ feat:todo-crud ∩ native:priority-decay)": {
-      "coordinate": "I(cap:cli-ux-shell ∩ feat:todo-crud ∩ native:priority-decay)",
+    "I(cap:cli-ux-shell ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)": {
+      "coordinate": "I(cap:cli-ux-shell ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
       "features": [
         "cap:cli-ux-shell",
+        "feat:tags-and-search",
         "feat:todo-crud",
         "native:priority-decay"
       ],
       "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::render_viewport_board`)",
       "shared_substrates": [],
+      "applied_pins": [
+        "EXC-003-crud-vs-tags"
+      ],
+      "incident_guards": []
+    },
+    "I(cap:cli-ux-shell ∩ feat:tags-and-search)": {
+      "coordinate": "I(cap:cli-ux-shell ∩ feat:tags-and-search)",
+      "features": [
+        "cap:cli-ux-shell",
+        "feat:tags-and-search"
+      ],
+      "derivation_reason": "Quantifier in 'cap:cli-ux-shell' matched 'feat:tags-and-search' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
       "applied_pins": [],
       "incident_guards": []
     },
@@ -342,15 +382,31 @@
       "applied_pins": [],
       "incident_guards": []
     },
-    "I(cap:fast-cache-sla ∩ feat:todo-crud ∩ native:priority-decay)": {
-      "coordinate": "I(cap:fast-cache-sla ∩ feat:todo-crud ∩ native:priority-decay)",
+    "I(cap:fast-cache-sla ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)": {
+      "coordinate": "I(cap:fast-cache-sla ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
       "features": [
         "cap:fast-cache-sla",
+        "feat:tags-and-search",
         "feat:todo-crud",
         "native:priority-decay"
       ],
       "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::list_todos_sorted`)",
       "shared_substrates": [],
+      "applied_pins": [
+        "EXC-003-crud-vs-tags"
+      ],
+      "incident_guards": []
+    },
+    "I(cap:fast-cache-sla ∩ feat:tags-and-search)": {
+      "coordinate": "I(cap:fast-cache-sla ∩ feat:tags-and-search)",
+      "features": [
+        "cap:fast-cache-sla",
+        "feat:tags-and-search"
+      ],
+      "derivation_reason": "Quantifier in 'cap:fast-cache-sla' matched 'feat:tags-and-search' on tags [\"read_query\"] -> obligation 'enforce_sub25ms_read_cache'",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
       "applied_pins": [],
       "incident_guards": []
     },
@@ -406,6 +462,19 @@
       "applied_pins": [],
       "incident_guards": []
     },
+    "I(cap:gdpr-privacy ∩ feat:tags-and-search)": {
+      "coordinate": "I(cap:gdpr-privacy ∩ feat:tags-and-search)",
+      "features": [
+        "cap:gdpr-privacy",
+        "feat:tags-and-search"
+      ],
+      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\"}",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
     "I(cap:gdpr-privacy ∩ feat:todo-crud)": {
       "coordinate": "I(cap:gdpr-privacy ∩ feat:todo-crud)",
       "features": [
@@ -442,6 +511,40 @@
         "DBTable:todos"
       ],
       "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(feat:recurring-tasks ∩ feat:tags-and-search ∩ feat:todo-crud)": {
+      "coordinate": "I(feat:recurring-tasks ∩ feat:tags-and-search ∩ feat:todo-crud)",
+      "features": [
+        "feat:recurring-tasks",
+        "feat:tags-and-search",
+        "feat:todo-crud"
+      ],
+      "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::complete_todo`)",
+      "shared_substrates": [],
+      "applied_pins": [
+        "EXC-002-crud-vs-recurring",
+        "EXC-003-crud-vs-tags",
+        "EXC-004-recurring-vs-tags"
+      ],
+      "incident_guards": [
+        "INC-001-double-complete-spawn"
+      ]
+    },
+    "I(feat:recurring-tasks ∩ feat:tags-and-search)": {
+      "coordinate": "I(feat:recurring-tasks ∩ feat:tags-and-search)",
+      "features": [
+        "feat:recurring-tasks",
+        "feat:tags-and-search"
+      ],
+      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [
+        "EXC-004-recurring-vs-tags"
+      ],
       "incident_guards": []
     },
     "I(feat:recurring-tasks ∩ feat:todo-crud)": {
@@ -493,6 +596,76 @@
       "coordinate": "I(feat:recurring-tasks)",
       "features": [
         "feat:recurring-tasks"
+      ],
+      "derivation_reason": "Basis self-slice [L0 (Domain Behavior)]",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(feat:tags-and-search ∩ feat:todo-crud ∩ mkt:google-login)": {
+      "coordinate": "I(feat:tags-and-search ∩ feat:todo-crud ∩ mkt:google-login)",
+      "features": [
+        "feat:tags-and-search",
+        "feat:todo-crud",
+        "mkt:google-login"
+      ],
+      "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::create_todo`)",
+      "shared_substrates": [],
+      "applied_pins": [
+        "EXC-003-crud-vs-tags"
+      ],
+      "incident_guards": []
+    },
+    "I(feat:tags-and-search ∩ feat:todo-crud)": {
+      "coordinate": "I(feat:tags-and-search ∩ feat:todo-crud)",
+      "features": [
+        "feat:tags-and-search",
+        "feat:todo-crud"
+      ],
+      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [
+        "EXC-003-crud-vs-tags"
+      ],
+      "incident_guards": []
+    },
+    "I(feat:tags-and-search ∩ mkt:google-login)": {
+      "coordinate": "I(feat:tags-and-search ∩ mkt:google-login)",
+      "features": [
+        "feat:tags-and-search",
+        "mkt:google-login"
+      ],
+      "derivation_reason": "Quantifier in 'mkt:google-login' matched 'feat:tags-and-search' on tags [\"mutable_state\"] -> obligation 'enforce_google_oauth_identity_guard'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(feat:tags-and-search ∩ native:priority-decay)": {
+      "coordinate": "I(feat:tags-and-search ∩ native:priority-decay)",
+      "features": [
+        "feat:tags-and-search",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(feat:tags-and-search)": {
+      "coordinate": "I(feat:tags-and-search)",
+      "features": [
+        "feat:tags-and-search"
       ],
       "derivation_reason": "Basis self-slice [L0 (Domain Behavior)]",
       "shared_substrates": [
@@ -600,6 +773,42 @@
       "chosen_option": "OPT-ATOMIC-COMPLETE-AND-SPAWN",
       "resolution_directive": "Fuse recurring task roll-forward directly inside the task completion transaction when recurrence_days is present AND the canary flag `flag_recurring_tasks` is enabled."
     },
+    "EXC-003-crud-vs-tags": {
+      "id": "EXC-003-crud-vs-tags",
+      "features": [
+        "feat:tags-and-search",
+        "feat:todo-crud"
+      ],
+      "conflict_summary": "Both 'Users can create, list, and complete todo tasks' and 'Users can organize tasks with project tags, search keywords, and filter views' mutate shared substrate [\"DBTable:todos\", \"Viewport:TodoList\"].",
+      "options": [
+        {
+          "option_id": "OPT-INLINE-TAG-EXTRACTION",
+          "label": "Inline Tag Extraction & Fused Filter Pipeline (Recommended)",
+          "business_impact": "Users can pass tags explicitly or inline (`#work`), and filtering happens prior to urgency sorting.",
+          "estimated_cost_or_latency": "0ms extra round-trip"
+        }
+      ],
+      "chosen_option": "OPT-INLINE-TAG-EXTRACTION",
+      "resolution_directive": "Normalize and deduplicate #tags directly inside TodoItem creation and fuse tag/keyword filtering into the cached list query pipeline."
+    },
+    "EXC-004-recurring-vs-tags": {
+      "id": "EXC-004-recurring-vs-tags",
+      "features": [
+        "feat:recurring-tasks",
+        "feat:tags-and-search"
+      ],
+      "conflict_summary": "Both 'Recurring tasks automatically spawn the next occurrence upon completion' and 'Users can organize tasks with project tags, search keywords, and filter views' mutate shared substrate [\"DBTable:todos\", \"Viewport:TodoList\"].",
+      "options": [
+        {
+          "option_id": "OPT-INHERIT-TAGS-ON-SPAWN",
+          "label": "Carry Forward #Tags to Spawned Recurring Occurrences (Recommended)",
+          "business_impact": "Recurring tasks keep their project tags (#ops, #weekly) across every future cycle.",
+          "estimated_cost_or_latency": "0ms overhead"
+        }
+      ],
+      "chosen_option": "OPT-INHERIT-TAGS-ON-SPAWN",
+      "resolution_directive": "When a recurring task is completed and spawns its next cycle occurrence, automatically carry forward all #tags from the completed parent task."
+    },
     "PARETO-001-cache-vs-gdpr": {
       "id": "PARETO-001-cache-vs-gdpr",
       "features": [
@@ -646,8 +855,8 @@
       "file_path": "src/lib.rs",
       "symbol": "AuthSession",
       "cell_coordinate": "I(mkt:google-login)",
-      "start_line": 13,
-      "end_line": 39,
+      "start_line": 17,
+      "end_line": 43,
       "content_sha256": "89339da82c680eae81e179130723ddc89a9c4206ae526c4bf63a39f20182d625",
       "verification_tests": [
         "test_google_oauth_rejects_unauthenticated_mutations"
@@ -656,33 +865,35 @@
     {
       "file_path": "src/lib.rs",
       "symbol": "TodoItem",
-      "cell_coordinate": "I(feat:todo-crud)",
-      "start_line": 41,
-      "end_line": 59,
-      "content_sha256": "dd0189b1d5adbeef43df7c07ba81799ffb38d8b711ea027f41e77513753e14d9",
+      "cell_coordinate": "I(feat:tags-and-search ∩ feat:todo-crud)",
+      "start_line": 45,
+      "end_line": 97,
+      "content_sha256": "80569c9c8bb07e71d158adfea4d3000646dd773d061a1ca79d0f88e0140122ed",
       "verification_tests": [
-        "test_create_and_complete_todo"
+        "test_create_and_complete_todo",
+        "test_tags_extraction_and_search_filter"
       ]
     },
     {
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::create_todo",
-      "cell_coordinate": "I(feat:todo-crud ∩ mkt:google-login)",
-      "start_line": 61,
-      "end_line": 111,
-      "content_sha256": "d339c9d5f8eb97228c51be558df02e5663f3cc2595df731d35f3848fb97f3630",
+      "cell_coordinate": "I(feat:tags-and-search ∩ feat:todo-crud ∩ mkt:google-login)",
+      "start_line": 99,
+      "end_line": 225,
+      "content_sha256": "2e2950f5cf736e404348d4943aa9609fa885d5e0b5a5d072c04c1a799e440e61",
       "verification_tests": [
         "test_create_and_complete_todo",
-        "test_google_oauth_rejects_unauthenticated_mutations"
+        "test_google_oauth_rejects_unauthenticated_mutations",
+        "test_persistent_disk_roundtrip"
       ]
     },
     {
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::complete_todo",
-      "cell_coordinate": "I(feat:recurring-tasks ∩ feat:todo-crud)",
-      "start_line": 113,
-      "end_line": 169,
-      "content_sha256": "a08e8fbd8ab289381f1e9a36ea57a35472d1632f786d2d7d0080e0e8dfb04ee9",
+      "cell_coordinate": "I(feat:recurring-tasks ∩ feat:tags-and-search ∩ feat:todo-crud)",
+      "start_line": 227,
+      "end_line": 290,
+      "content_sha256": "edf714a87d360e94edb29d304e2d7161d1c6e61031d84d3b943b98b4a3a9f704",
       "verification_tests": [
         "test_recurring_task_spawns_next_cycle",
         "test_inc_001_idempotent_complete_never_spawns_duplicate_recurrence"
@@ -691,21 +902,22 @@
     {
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::list_todos_sorted",
-      "cell_coordinate": "I(cap:fast-cache-sla ∩ feat:todo-crud ∩ native:priority-decay)",
-      "start_line": 171,
-      "end_line": 205,
-      "content_sha256": "7b459a6a4931abfbc7c330417e8ff5269d6e5fa1406d9276601f9100eed39473",
+      "cell_coordinate": "I(cap:fast-cache-sla ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
+      "start_line": 292,
+      "end_line": 364,
+      "content_sha256": "a4f342b7461f4e1d373e2c185f4ec935dbd4580d5c2f4ae479e202a9463727f9",
       "verification_tests": [
-        "test_cached_list_sorted_by_native_urgency"
+        "test_cached_list_sorted_by_native_urgency",
+        "test_tags_extraction_and_search_filter"
       ]
     },
     {
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::gdpr_erase_and_export",
       "cell_coordinate": "I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)",
-      "start_line": 207,
-      "end_line": 236,
-      "content_sha256": "1f47ef9915fd1d814e99d32cec3472e72a0fc14306ecfa5337e35beead98e542",
+      "start_line": 366,
+      "end_line": 396,
+      "content_sha256": "0278bacfe1b5120ac240e67c16bf350ff469ed6de6c98af8e7d84bf030d97ec5",
       "verification_tests": [
         "test_gdpr_erasure_wipes_storage_and_cache_synchronously"
       ]
@@ -713,10 +925,10 @@
     {
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::render_viewport_board",
-      "cell_coordinate": "I(cap:cli-ux-shell ∩ feat:todo-crud ∩ native:priority-decay)",
-      "start_line": 238,
-      "end_line": 272,
-      "content_sha256": "ad2eb79240aebf3885a85b6f4f9dec4becdde37785b563a3a91d9fcb82f7bb44",
+      "cell_coordinate": "I(cap:cli-ux-shell ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
+      "start_line": 398,
+      "end_line": 493,
+      "content_sha256": "0fa1279591ad905d9c4c7304b85d7a4c7aaa0aebb2dd5c29fa5add66595c8d3c",
       "verification_tests": [
         "test_render_viewport_board_formats_badges"
       ]
