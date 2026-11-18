@@ -89,11 +89,11 @@ gvcs status — examples/todo-app (lock: 082a91bc ✓ synced)
       Features:  cap:web-ui + feat:tags-and-search + feat:todo-crud + native:priority-decay
 ```
 
-### 2. Launch the Live Web UI with "gvcs Provenance X-Ray"
+### 2. Launch the Live Todo Web App (`todo-app serve`)
 ```bash
 cargo run -p todo-app -- serve --addr 127.0.0.1:8080
 ```
-Open **`http://127.0.0.1:8080`** in your browser. Click the **`🔬 gvcs Provenance X-Ray: ON`** button in the header to inspect which features, product decisions (`EXC-002`, `PARETO-001`), and bug guards (`INC-001`) power every card on the screen—or toggle **`🐤 Canary Recurring Tasks`** on and off live!
+Open **`http://127.0.0.1:8080`** in your browser to add tasks with inline `#tags` and recurrence, filter by tag or keyword with sub-25ms cache telemetry, complete recurring tasks, and trigger 1-click GDPR JSON export & erasure.
 
 *(Want a sub-second terminal walkthrough without opening a browser? Run `cargo run -p todo-app -- demo`).*
 
