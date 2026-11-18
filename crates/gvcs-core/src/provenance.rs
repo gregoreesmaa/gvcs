@@ -1,21 +1,27 @@
 use crate::model::*;
 use crate::parser::sha256_normalized;
 use anyhow::{Context, Result};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 use walkdir::WalkDir;
 
 /// Scans committed source files in `src/` for `// @gvcs-begin` ... `// @gvcs-end`
 /// provenance annotations, computing deterministic content hashes for every
-/// Intersection Cell span ($I_{A \cap B}$).
+/// linked code block.
 ///
-/// Annotation syntax inside Rust/TypeScript/Go/SQL files:
+/// Supports both `cell="I(a ∩ b)"` and `features="a + b"` in any feature order:
 /// ```text
-/// // @gvcs-begin cell="I(cap:gdpr-privacy ∩ feat:todo-crud)" symbol="TodoStore::gdpr_erase_user" tests="test_gdpr_erasure_wipes_user_todos"
-/// pub fn gdpr_erase_user(...) { ... }
+/// // @gvcs-begin cell="I(cap:gdpr-privacy ∩ feat:todo-crud)" symbol="TodoStore::gdpr_erase_and_export" tests="test_gdpr_erasure_wipes_storage_and_cache_synchronously"
+/// pub fn gdpr_erase_and_export(...) { ... }
 /// // @gvcs-end
 /// ```
-pub fn scan_source_provenance_spans(project_root: &Path) -> Result<Vec<CodeProvenanceSpan>> {
+pub fn scan_source_provenance_spans(
+    project_root: &Path,
+    known_features: &BTreeMap<String, FeatureVector>,
+    exceptions: &BTreeMap<String, ExceptionPin>,
+    incidents: &BTreeMap<String, IncidentRecord>,
+) -> Result<Vec<CodeProvenanceSpan>> {
     let src_dir = project_root.join("src");
     if !src_dir.exists() {
         return Ok(Vec::new());
@@ -43,15 +49,25 @@ pub fn scan_source_provenance_spans(project_root: &Path) -> Result<Vec<CodeProve
             .with_context(|| format!("Failed to read source file: {}", path.display()))?;
         let lines: Vec<&str> = content.lines().collect();
 
-        let mut active_span: Option<(String, String, Vec<String>, usize, Vec<String>)> = None;
+        let mut active_span: Option<(String, std::collections::BTreeSet<String>, String, Vec<String>, usize, Vec<String>)> = None;
 
         for (idx, line) in lines.iter().enumerate() {
             let line_num = idx + 1;
             let trimmed = line.trim();
 
             if let Some(meta) = trimmed.strip_prefix("// @gvcs-begin") {
-                let cell = extract_attr(meta, "cell").unwrap_or_else(|| "I(unknown)".to_string());
-                let symbol = extract_attr(meta, "symbol").unwrap_or_else(|| "anonymous".to_string());
+                let raw_cell = extract_attr(meta, "cell")
+                    .or_else(|| extract_attr(meta, "features"))
+                    .unwrap_or_else(|| "I(unknown)".to_string());
+                let (_, raw_set) = IntersectionCell::parse_and_canonicalize(&raw_cell);
+                let resolved_set: std::collections::BTreeSet<String> = raw_set
+                    .iter()
+                    .map(|f| resolve_feature_slug(f, known_features))
+                    .collect();
+                let canonical_coord = IntersectionCell::format_coordinate(&resolved_set);
+
+                let symbol =
+                    extract_attr(meta, "symbol").unwrap_or_else(|| format!("line_{}", line_num));
                 let tests_raw = extract_attr(meta, "tests").unwrap_or_default();
                 let tests: Vec<String> = tests_raw
                     .split(',')
@@ -59,22 +75,38 @@ pub fn scan_source_provenance_spans(project_root: &Path) -> Result<Vec<CodeProve
                     .filter(|s| !s.is_empty())
                     .collect();
 
-                active_span = Some((cell, symbol, tests, line_num, Vec::new()));
+                active_span = Some((
+                    canonical_coord,
+                    resolved_set,
+                    symbol,
+                    tests,
+                    line_num,
+                    Vec::new(),
+                ));
             } else if trimmed.starts_with("// @gvcs-end") {
-                if let Some((cell, symbol, tests, start_line, body_lines)) = active_span.take() {
+                if let Some((cell_coord, feat_set, symbol, tests, start_line, body_lines)) =
+                    active_span.take()
+                {
                     let body_joined = body_lines.join("\n");
                     let content_sha256 = sha256_normalized(&body_joined);
+                    let active_pins = crate::solver::find_matching_pins(&feat_set, exceptions);
+                    let active_incidents =
+                        crate::solver::find_matching_incidents(&feat_set, incidents);
+
                     spans.push(CodeProvenanceSpan {
                         file_path: rel_path.clone(),
                         symbol,
-                        cell_coordinate: cell,
+                        cell_coordinate: cell_coord,
+                        features: feat_set,
                         start_line,
                         end_line: line_num,
                         content_sha256,
                         verification_tests: tests,
+                        active_pins,
+                        active_incidents,
                     });
                 }
-            } else if let Some((_, _, _, _, ref mut body_lines)) = active_span {
+            } else if let Some((_, _, _, _, _, ref mut body_lines)) = active_span {
                 body_lines.push((*line).to_string());
             }
         }
@@ -103,13 +135,15 @@ pub struct SpanDrift {
     pub file_path: String,
     pub symbol: String,
     pub cell_coordinate: String,
+    pub start_line: usize,
+    pub end_line: usize,
     pub locked_sha256: String,
     pub current_sha256: String,
     pub has_active_tourniquet: bool,
 }
 
 /// Compares the current `src/` code spans against the committed `provenance.lock` to detect
-/// un-synced 3 AM manual code hotfixes (the Tourniquet-to-Invariant trigger).
+/// unsynced manual code edits (3 AM hotfix drift).
 pub fn verify_provenance_drift(
     lock: &ProvenanceLock,
     current_spans: &[CodeProvenanceSpan],
@@ -122,19 +156,26 @@ pub fn verify_provenance_drift(
             .find(|s| s.file_path == locked.file_path && s.symbol == locked.symbol)
         {
             if curr.content_sha256 != locked.content_sha256 {
-                let has_tourniquet = lock.incidents.values().any(|inc| match &inc.stage {
-                    IncidentStage::Tourniquet {
-                        touched_file,
-                        touched_symbol,
-                        ..
-                    } => touched_file == &locked.file_path && touched_symbol == &locked.symbol,
-                    _ => false,
-                });
+                let has_tourniquet =
+                    lock.incidents
+                        .values()
+                        .any(|inc| match inc.resolved_stage() {
+                            IncidentStage::Tourniquet {
+                                touched_file,
+                                touched_symbol,
+                                ..
+                            } => {
+                                touched_file == locked.file_path && touched_symbol == locked.symbol
+                            }
+                            _ => false,
+                        });
 
                 drifts.push(SpanDrift {
                     file_path: locked.file_path.clone(),
                     symbol: locked.symbol.clone(),
                     cell_coordinate: locked.cell_coordinate.clone(),
+                    start_line: curr.start_line,
+                    end_line: curr.end_line,
                     locked_sha256: locked.content_sha256.clone(),
                     current_sha256: curr.content_sha256.clone(),
                     has_active_tourniquet: has_tourniquet,

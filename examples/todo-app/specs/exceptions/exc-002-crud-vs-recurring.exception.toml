@@ -1,11 +1,4 @@
 id = "EXC-002-crud-vs-recurring"
-features = ["feat:recurring-tasks", "feat:todo-crud"]
-conflict_summary = "Both 'Users can create, list, and complete todo tasks' and 'Recurring tasks automatically spawn the next occurrence upon completion' mutate shared substrate [\"DBTable:todos\", \"Viewport:TodoList\"]."
-chosen_option = "OPT-ATOMIC-COMPLETE-AND-SPAWN"
-resolution_directive = "Fuse recurring task roll-forward directly inside the task completion transaction when recurrence_days is present AND the canary flag `flag_recurring_tasks` is enabled."
-
-[[options]]
-option_id = "OPT-ATOMIC-COMPLETE-AND-SPAWN"
-label = "Atomic Complete & Spawn Next Cycle in Single Fused Mutation"
-business_impact = "Completing a recurring task immediately shows the newly scheduled next occurrence in the same list refresh."
-estimated_cost_or_latency = "0ms extra round-trip"
+between = ["recurring-tasks", "todo-crud"]
+question = "When a user marks a recurring task as completed, when should the next cycle's task be created?"
+decision = "Complete the current task and spawn next cycle's pending task atomically in the same step (when `flag_recurring_tasks` canary is enabled)."

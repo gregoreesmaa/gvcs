@@ -1,17 +1,8 @@
 id = "PARETO-001-cache-vs-gdpr"
-features = ["cap:fast-cache-sla", "cap:gdpr-privacy"]
-conflict_summary = "PACELC Tradeoff between 'Sub-25ms Read Latency SLA via Write-Through Memory Cache' (<25ms cached reads) and 'EU Privacy Safe (GDPR Right to Erasure & Portability)' (0ms stale PII after erasure)."
-chosen_option = "OPT-SYNCHRONOUS-INVALIDATION"
-resolution_directive = "Maintain in-memory read cache for sub-25ms reads, but execute synchronous cache key eviction inside the atomic GDPR erasure transaction before returning."
-
-[[options]]
-option_id = "OPT-SYNCHRONOUS-INVALIDATION"
-label = "Write-Through Cache Purge on GDPR Erase (Recommended)"
-business_impact = "Normal Todo reads stay fast (<2ms via in-memory cache); GDPR erasure synchronously zeroes the cache before returning."
-estimated_cost_or_latency = "Read p99: 1.2ms | Erase p99: 4.5ms"
-
-[[options]]
-option_id = "OPT-NO-CACHE-STRICT"
-label = "Disable Read Caching for PII Entities"
-business_impact = "Guaranteed zero cache lag, but list queries hit primary storage on every view."
-estimated_cost_or_latency = "Read p99: 18ms | Erase p99: 2.0ms"
+between = ["fast-cache-sla", "gdpr-privacy"]
+question = "How should the sub-25ms memory cache behave when a user clicks GDPR Erase?"
+decision = "Clear the in-memory read cache immediately inside the GDPR erase step before returning (0ms stale data)."
+alternatives = [
+  "Clear cache immediately on GDPR erase (Chosen: <2ms reads, 0ms stale data)",
+  "Disable caching for personal tasks (~18ms disk reads on every view)"
+]

@@ -1,9 +1,15 @@
-//! Reference Todo Application — Committed Fused Code with `gvcs` Intersection Provenance.
+//! Reference Todo Application — Committed Fused Code with `gvcs` Feature Provenance.
 //!
-//! Demonstrating `gvcs` Feature Removal & Addition:
-//! - REMOVED: `mkt:google-login` (AuthSession & OAuth guards cleanly excised)
-//! - REMOVED: `cap:cli-ux-shell` (Terminal ASCII board renderer cleanly excised)
-//! - ADDED:   `cap:web-ui` (Interactive Single-Page Web UI & REST API Projection)
+//! Every code block in this crate is linked 1-to-1 in `provenance.lock` to its exact
+//! Feature Overlap (`I(A ∩ B)`), Product Decision (`specs/exceptions/*.toml`), and
+//! Bug Guard (`specs/incidents/*.toml`):
+//!
+//! 1. `src/native_priority.rs` -> `I(native:priority-decay)` (`compute_urgency_score`)
+//! 2. `src/lib.rs`             -> `I(feat:tags-and-search ∩ feat:todo-crud)` (`TodoStore::create_todo`)
+//! 3. `src/lib.rs`             -> `I(feat:recurring-tasks ∩ feat:tags-and-search ∩ feat:todo-crud)` (`TodoStore::complete_todo`)
+//! 4. `src/lib.rs`             -> `I(cap:fast-cache-sla ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)` (`TodoStore::list_todos_sorted`)
+//! 5. `src/lib.rs`             -> `I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)` (`TodoStore::gdpr_erase_and_export`)
+//! 6. `src/web_ui.rs`          -> `I(cap:web-ui ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)` (`web_ui::dispatch_http_request`)
 
 pub mod native_priority;
 pub mod web_ui;
@@ -15,7 +21,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-// @gvcs-begin cell="I(feat:tags-and-search ∩ feat:todo-crud)" symbol="TodoItem" tests="test_create_and_complete_todo,test_tags_extraction_and_search_filter"
+// @gvcs-begin cell="I(feat:tags-and-search ∩ feat:todo-crud)" symbol="TodoStore::create_todo" tests="test_create_and_complete_todo,test_tags_extraction_and_search_filter,test_persistent_disk_roundtrip"
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TodoStatus {
     Pending,
@@ -68,9 +74,7 @@ pub fn normalize_tags(title: &str, explicit_tags: &[String]) -> Vec<String> {
     }
     set.into_iter().collect()
 }
-// @gvcs-end
 
-// @gvcs-begin cell="I(feat:tags-and-search ∩ feat:todo-crud)" symbol="TodoStore::create_todo" tests="test_create_and_complete_todo,test_persistent_disk_roundtrip"
 /// Persistent & in-memory database substrate (`DBTable:todos`) + write-through read cache (`cap:fast-cache-sla`).
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TodoStore {
@@ -79,7 +83,7 @@ pub struct TodoStore {
     /// Write-through read cache (`cap:fast-cache-sla`).
     #[serde(skip)]
     read_cache: Option<Vec<TodoItem>>,
-    /// Runtime canary flag for `feat:recurring-tasks` (`@lifecycle: CANARY(25%, flag_recurring_tasks)`).
+    /// Runtime canary flag for `feat:recurring-tasks` (`Rollout: Canary 25% (flag_recurring_tasks)`).
     pub flag_recurring_tasks: bool,
     /// Optional disk backing path for persistent storage.
     #[serde(skip)]
@@ -137,12 +141,7 @@ impl TodoStore {
                 None,
                 &["work".to_string()],
             );
-            let _ = self.create_todo(
-                "Pick up espresso beans #home",
-                1,
-                -8,
-                None,
-            );
+            let _ = self.create_todo("Pick up espresso beans #home", 1, -8, None);
         }
     }
 
@@ -159,7 +158,7 @@ impl TodoStore {
         Ok(())
     }
 
-    /// Creates a new Todo item (excised `mkt:google-login` auth requirement after feature removal).
+    /// Creates a new Todo item.
     pub fn create_todo(
         &mut self,
         title: &str,
@@ -221,10 +220,10 @@ impl TodoStore {
 // @gvcs-begin cell="I(feat:recurring-tasks ∩ feat:tags-and-search ∩ feat:todo-crud)" symbol="TodoStore::complete_todo" tests="test_recurring_task_spawns_next_cycle,test_inc_001_idempotent_complete_never_spawns_duplicate_recurrence"
     /// Fused completion & recurring roll-forward mutation.
     /// Governed by:
-    /// - Exception Pin `EXC-002-crud-vs-recurring` (atomic complete & spawn)
-    /// - Exception Pin `EXC-004-recurring-vs-tags` (carry forward #tags to spawned cycle)
-    /// - Incident Invariant `INC-001-double-complete-spawn` (idempotent guard on already-Completed tasks)
-    /// - Lifecycle Canary Gate `flag_recurring_tasks`
+    /// - Product Decision `EXC-002-crud-vs-recurring` (atomic complete & spawn)
+    /// - Product Decision `EXC-004-recurring-vs-tags` (carry forward #tags to spawned cycle)
+    /// - Bug Guard `INC-001-double-complete-spawn` (idempotent guard on already-Completed tasks)
+    /// - Canary Rollout Flag `flag_recurring_tasks`
     pub fn complete_todo(
         &mut self,
         todo_id: u64,
@@ -234,7 +233,7 @@ impl TodoStore {
             .get_mut(&todo_id)
             .ok_or("NotFound: todo item does not exist")?;
 
-        // [INC-001 Negative Invariant Guard]: Completing an already-Completed task is an idempotent
+        // [INC-001 Permanent Bug Guard]: Completing an already-Completed task is a safe
         // no-op and must NEVER spawn duplicate recurring occurrences.
         if existing.status == TodoStatus::Completed {
             return Ok((existing.clone(), None));
@@ -282,7 +281,7 @@ impl TodoStore {
 // @gvcs-end
 
 // @gvcs-begin cell="I(cap:fast-cache-sla ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)" symbol="TodoStore::list_todos_sorted" tests="test_cached_list_sorted_by_native_urgency,test_tags_extraction_and_search_filter"
-    /// Joint Multi-Cell Fused Query:
+    /// Joint Fused Query:
     /// Combines `feat:todo-crud` retrieval, `native:priority-decay` urgency scoring,
     /// `feat:tags-and-search` filtering, and `cap:fast-cache-sla` sub-25ms write-through caching.
     pub fn list_todos_sorted(&mut self) -> Result<(Vec<TodoItem>, bool), &'static str> {
@@ -350,9 +349,9 @@ impl TodoStore {
 // @gvcs-end
 
 // @gvcs-begin cell="I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)" symbol="TodoStore::gdpr_erase_and_export" tests="test_gdpr_erasure_wipes_storage_and_cache_synchronously"
-    /// Governed by Pareto Tradeoff Pin `PARETO-001-cache-vs-gdpr` (`OPT-SYNCHRONOUS-INVALIDATION`):
+    /// Governed by Product Decision `PARETO-001-cache-vs-gdpr`:
     /// Exports all user data and permanently erases all rows in `DBTable:todos` PLUS synchronously
-    /// evicts the `cap:fast-cache-sla` read cache so stale PII can never be served (0ms window).
+    /// evicts the `cap:fast-cache-sla` read cache so stale personal data can never be served (0ms window).
     pub fn gdpr_erase_and_export(&mut self) -> Result<(String, usize), &'static str> {
         let all_items: Vec<TodoItem> = self.rows.values().cloned().collect();
         let export_json =
@@ -361,7 +360,7 @@ impl TodoStore {
         let removed = self.rows.len();
         self.rows.clear();
 
-        // [PARETO-001 Synchronous Cache Purge]: Guarantee 0ms stale PII reads
+        // [PARETO-001 Synchronous Cache Purge]: Guarantee 0ms stale reads
         self.read_cache = None;
         let _ = self.flush_to_disk();
 

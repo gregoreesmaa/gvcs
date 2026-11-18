@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "graph_state_hash": "1e0aa68c517a6a5a0122716088efe9a08548c7ad77d3fb2e091206ef48a0c3f4",
+  "graph_state_hash": "d2c7fc730a33572a3ebbb8eca327dea78ec72377d88e30482d60c3f3aa0a4ae0",
   "features": {
     "cap:fast-cache-sla": {
       "id": "cap:fast-cache-sla",
@@ -12,7 +12,9 @@
         "state": "GA"
       },
       "ontology_tags": [
-        "read_query"
+        "pii",
+        "read_query",
+        "user_data"
       ],
       "substrates": [
         "Budget:Latency25ms",
@@ -20,20 +22,20 @@
       ],
       "quantifiers": [
         {
-          "statement": "For ANY feature that performs a read_query on DBTable:todos, serve results from an in-memory read cache under 25ms p99.",
+          "statement": "For ANY feature that lists or searches todo tasks, serve results from an in-memory read cache under 25ms p99.",
           "matches_any_tag": [
             "read_query"
           ],
           "matches_any_substrate": [
             "DBTable:todos"
           ],
-          "emits_obligation": "enforce_sub25ms_read_cache"
+          "emits_obligation": "Serve read queries via sub-25ms write-through memory cache"
         }
       ],
       "scenarios": [
         "Cached task list retrieval"
       ],
-      "spec_digest": "6327d5c958fdc94a514b62ae5d2447fb737534044975ee18bb40523c9a2dae71"
+      "spec_digest": "65152275e4feb47cc47f61228882cdb3c6ce17ad0070a4049c0929f5c16e9082"
     },
     "cap:gdpr-privacy": {
       "id": "cap:gdpr-privacy",
@@ -41,8 +43,8 @@
       "spec_path": "specs/capabilities/gdpr-privacy.cap",
       "kind": {
         "marketplace_blueprint": {
-          "package": "",
-          "version": "marketplace/eu-gdpr-privacy-safe@3.1.0"
+          "package": "@marketplace/eu-gdpr-privacy-safe",
+          "version": "3.1.0"
         }
       },
       "stratum": "L1Policy",
@@ -50,7 +52,10 @@
         "state": "GA"
       },
       "ontology_tags": [
+        "mutable_state",
+        "persistent_storage",
         "pii",
+        "read_query",
         "user_data"
       ],
       "substrates": [
@@ -58,19 +63,19 @@
       ],
       "quantifiers": [
         {
-          "statement": "For ANY feature that stores Customer PII or user_data, provide 1-click full erasure and JSON export with zero stale reads.",
+          "statement": "For ANY feature that stores personal user data, provide 1-click full erasure and JSON export with zero stale reads.",
           "matches_any_tag": [
             "pii",
             "user_data"
           ],
           "matches_any_substrate": [],
-          "emits_obligation": "enforce_gdpr_erasure_and_export"
+          "emits_obligation": "Provide 1-click GDPR erasure & JSON export with 0ms stale reads"
         }
       ],
       "scenarios": [
         "1-Click Right to Be Forgotten"
       ],
-      "spec_digest": "35fb8b166cab846244d915d3de720727d218e19ae5fc9a5c9c71fb09c4ebe9c2"
+      "spec_digest": "46b001c9edb73d11eaf7bdc2e0baa8b4c9321ec880587415b0530fee09781d68"
     },
     "cap:web-ui": {
       "id": "cap:web-ui",
@@ -82,27 +87,30 @@
         "state": "GA"
       },
       "ontology_tags": [
+        "pii",
+        "read_query",
+        "user_data",
         "user_facing"
       ],
       "substrates": [
-        "Viewport:TodoList"
+        "DBTable:todos"
       ],
       "quantifiers": [
         {
-          "statement": "For ANY user-facing feature on Viewport:TodoList, project an interactive Web UI dashboard with live tag pills, urgency heat badges, and a confirmation modal for destructive actions (GDPR Export & Erase).",
+          "statement": "For ANY user-facing feature on the todo list, display an interactive Web UI dashboard with live tag pills, urgency heat badges, and a confirmation modal for destructive actions.",
           "matches_any_tag": [
             "user_facing"
           ],
           "matches_any_substrate": [
             "Viewport:TodoList"
           ],
-          "emits_obligation": "enforce_viewport_ux_choreography"
+          "emits_obligation": "Project onto interactive Web UI dashboard with confirmation guard"
         }
       ],
       "scenarios": [
         "User manages tasks through the browser Web UI"
       ],
-      "spec_digest": "0ad2e7e230611683c0b68aca5f688b84577f4c519b2765c90fc1eb8735112499"
+      "spec_digest": "4c87069362c4ddb8c2ddc3dad6479a9f0078acbe6343095f969239a2039548cd"
     },
     "feat:recurring-tasks": {
       "id": "feat:recurring-tasks",
@@ -117,7 +125,9 @@
       },
       "ontology_tags": [
         "mutable_state",
-        "persistent_storage"
+        "persistent_storage",
+        "pii",
+        "user_data"
       ],
       "substrates": [
         "DBTable:todos",
@@ -126,9 +136,9 @@
       "quantifiers": [],
       "scenarios": [
         "Completing a recurring task spawns the next cycle",
-        "Completing an already-completed recurring task must NEVER spawn duplicate occurrences (see INC-001)"
+        "Completing an already-completed recurring task must NEVER spawn duplicate occurrences"
       ],
-      "spec_digest": "6bfce43e89fe7ed86fcda1cb01817e8cf84317eccc18469ab6d26a8fd23b15ae"
+      "spec_digest": "9228c392d4cbcfdc724ae81660f9861c0032c2953e4217264d00579a01666316"
     },
     "feat:tags-and-search": {
       "id": "feat:tags-and-search",
@@ -142,7 +152,9 @@
       "ontology_tags": [
         "mutable_state",
         "persistent_storage",
-        "read_query"
+        "pii",
+        "read_query",
+        "user_data"
       ],
       "substrates": [
         "DBTable:todos",
@@ -152,7 +164,7 @@
       "scenarios": [
         "User filters todo board by project tag or keyword"
       ],
-      "spec_digest": "b4e48d42798959d90bfc8462a0ef9bbd4fcf677099da837258d536e3d091aaad"
+      "spec_digest": "2688d15784e37dbd1948ab767e8027c6426a89e07978177eec2394c790f9b758"
     },
     "feat:todo-crud": {
       "id": "feat:todo-crud",
@@ -179,11 +191,11 @@
         "User creates a new todo task",
         "User completes an existing todo task"
       ],
-      "spec_digest": "b7adb8f7998751079fa270daa2faab782970d71a8dc341ebfb37a2f246bc7485"
+      "spec_digest": "7a0af419b35856e5c5e7be8cd3c18ae3eee032e32ebad74e6148816c0a6d261f"
     },
     "native:priority-decay": {
       "id": "native:priority-decay",
-      "title": "Real-time Urgency Scoring Kernel (@native Code Escape Hatch)",
+      "title": "Real-time Urgency Scoring Kernel",
       "spec_path": "specs/features/003-priority-scoring.feature",
       "kind": {
         "native_cell": {
@@ -206,7 +218,7 @@
       "scenarios": [
         "Urgency score is strictly monotonic with respect to priority weight and hours overdue."
       ],
-      "spec_digest": "d5bb12ba53ddf3e406b9e3efc29f8b009dedd4f352e8547b1f496110ba1476cb"
+      "spec_digest": "51068faef6f53ef57a33117806234f30d07e9c8bd46046df66d547ef40b58d3d"
     }
   },
   "cells": {
@@ -217,8 +229,10 @@
         "cap:gdpr-privacy",
         "feat:todo-crud"
       ],
-      "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::gdpr_erase_and_export`)",
-      "shared_substrates": [],
+      "derivation_reason": "Fused multi-feature code block (`TodoStore::gdpr_erase_and_export`)",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
       "applied_pins": [
         "PARETO-001-cache-vs-gdpr"
       ],
@@ -230,7 +244,7 @@
         "cap:fast-cache-sla",
         "cap:gdpr-privacy"
       ],
-      "derivation_reason": "Quantifier in 'cap:fast-cache-sla' matched 'cap:gdpr-privacy' on tags [] -> obligation 'enforce_sub25ms_read_cache'",
+      "derivation_reason": "Rule in 'cap:fast-cache-sla' applies to 'cap:gdpr-privacy' (matched tags [read_query] & resource [DBTable:todos]) -> Serve read queries via sub-25ms write-through memory cache",
       "shared_substrates": [
         "DBTable:todos"
       ],
@@ -239,13 +253,26 @@
       ],
       "incident_guards": []
     },
+    "I(cap:fast-cache-sla ∩ cap:web-ui)": {
+      "coordinate": "I(cap:fast-cache-sla ∩ cap:web-ui)",
+      "features": [
+        "cap:fast-cache-sla",
+        "cap:web-ui"
+      ],
+      "derivation_reason": "Rule in 'cap:fast-cache-sla' applies to 'cap:web-ui' (matched tags [read_query] & resource [DBTable:todos]) -> Serve read queries via sub-25ms write-through memory cache",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
     "I(cap:fast-cache-sla ∩ feat:recurring-tasks)": {
       "coordinate": "I(cap:fast-cache-sla ∩ feat:recurring-tasks)",
       "features": [
         "cap:fast-cache-sla",
         "feat:recurring-tasks"
       ],
-      "derivation_reason": "Quantifier in 'cap:fast-cache-sla' matched 'feat:recurring-tasks' on tags [] -> obligation 'enforce_sub25ms_read_cache'",
+      "derivation_reason": "Rule in 'cap:fast-cache-sla' applies to 'feat:recurring-tasks' (matched shared resource [DBTable:todos]) -> Serve read queries via sub-25ms write-through memory cache",
       "shared_substrates": [
         "DBTable:todos"
       ],
@@ -260,8 +287,10 @@
         "feat:todo-crud",
         "native:priority-decay"
       ],
-      "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::list_todos_sorted`)",
-      "shared_substrates": [],
+      "derivation_reason": "Fused multi-feature code block (`TodoStore::list_todos_sorted`)",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
       "applied_pins": [
         "EXC-003-crud-vs-tags"
       ],
@@ -273,7 +302,7 @@
         "cap:fast-cache-sla",
         "feat:tags-and-search"
       ],
-      "derivation_reason": "Quantifier in 'cap:fast-cache-sla' matched 'feat:tags-and-search' on tags [\"read_query\"] -> obligation 'enforce_sub25ms_read_cache'",
+      "derivation_reason": "Rule in 'cap:fast-cache-sla' applies to 'feat:tags-and-search' (matched tags [read_query] & resource [DBTable:todos]) -> Serve read queries via sub-25ms write-through memory cache",
       "shared_substrates": [
         "DBTable:todos"
       ],
@@ -286,7 +315,7 @@
         "cap:fast-cache-sla",
         "feat:todo-crud"
       ],
-      "derivation_reason": "Quantifier in 'cap:fast-cache-sla' matched 'feat:todo-crud' on tags [\"read_query\"] -> obligation 'enforce_sub25ms_read_cache'",
+      "derivation_reason": "Rule in 'cap:fast-cache-sla' applies to 'feat:todo-crud' (matched tags [read_query] & resource [DBTable:todos]) -> Serve read queries via sub-25ms write-through memory cache",
       "shared_substrates": [
         "DBTable:todos"
       ],
@@ -299,7 +328,7 @@
         "cap:fast-cache-sla",
         "native:priority-decay"
       ],
-      "derivation_reason": "Quantifier in 'cap:fast-cache-sla' matched 'native:priority-decay' on tags [\"read_query\"] -> obligation 'enforce_sub25ms_read_cache'",
+      "derivation_reason": "Rule in 'cap:fast-cache-sla' applies to 'native:priority-decay' (matched tags [read_query] & resource [DBTable:todos]) -> Serve read queries via sub-25ms write-through memory cache",
       "shared_substrates": [
         "DBTable:todos"
       ],
@@ -311,9 +340,22 @@
       "features": [
         "cap:fast-cache-sla"
       ],
-      "derivation_reason": "Basis self-slice [L3 (Operational Envelope)]",
+      "derivation_reason": "Base specification [Performance & Scale]",
       "shared_substrates": [
         "Budget:Latency25ms",
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:gdpr-privacy ∩ cap:web-ui)": {
+      "coordinate": "I(cap:gdpr-privacy ∩ cap:web-ui)",
+      "features": [
+        "cap:gdpr-privacy",
+        "cap:web-ui"
+      ],
+      "derivation_reason": "Both touch shared resource [DBTable:todos]",
+      "shared_substrates": [
         "DBTable:todos"
       ],
       "applied_pins": [],
@@ -325,7 +367,7 @@
         "cap:gdpr-privacy",
         "feat:recurring-tasks"
       ],
-      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\"}",
+      "derivation_reason": "Rule in 'cap:gdpr-privacy' applies to 'feat:recurring-tasks' (matched tags [pii, user_data]) -> Provide 1-click GDPR erasure & JSON export with 0ms stale reads",
       "shared_substrates": [
         "DBTable:todos"
       ],
@@ -338,7 +380,7 @@
         "cap:gdpr-privacy",
         "feat:tags-and-search"
       ],
-      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\"}",
+      "derivation_reason": "Rule in 'cap:gdpr-privacy' applies to 'feat:tags-and-search' (matched tags [pii, user_data]) -> Provide 1-click GDPR erasure & JSON export with 0ms stale reads",
       "shared_substrates": [
         "DBTable:todos"
       ],
@@ -351,7 +393,7 @@
         "cap:gdpr-privacy",
         "feat:todo-crud"
       ],
-      "derivation_reason": "Quantifier in 'cap:gdpr-privacy' matched 'feat:todo-crud' on tags [\"pii\", \"user_data\"] -> obligation 'enforce_gdpr_erasure_and_export'",
+      "derivation_reason": "Rule in 'cap:gdpr-privacy' applies to 'feat:todo-crud' (matched tags [pii, user_data]) -> Provide 1-click GDPR erasure & JSON export with 0ms stale reads",
       "shared_substrates": [
         "DBTable:todos"
       ],
@@ -364,7 +406,7 @@
         "cap:gdpr-privacy",
         "native:priority-decay"
       ],
-      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\"}",
+      "derivation_reason": "Both touch shared resource [DBTable:todos]",
       "shared_substrates": [
         "DBTable:todos"
       ],
@@ -376,7 +418,7 @@
       "features": [
         "cap:gdpr-privacy"
       ],
-      "derivation_reason": "Basis self-slice [L1 (Policy & Compliance)]",
+      "derivation_reason": "Base specification [Policy & Compliance]",
       "shared_substrates": [
         "DBTable:todos"
       ],
@@ -389,9 +431,9 @@
         "cap:web-ui",
         "feat:recurring-tasks"
       ],
-      "derivation_reason": "Quantifier in 'cap:web-ui' matched 'feat:recurring-tasks' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "derivation_reason": "Rule in 'cap:web-ui' applies to 'feat:recurring-tasks' (matched shared resource [Viewport:TodoList]) -> Project onto interactive Web UI dashboard with confirmation guard",
       "shared_substrates": [
-        "Viewport:TodoList"
+        "DBTable:todos"
       ],
       "applied_pins": [],
       "incident_guards": []
@@ -404,8 +446,10 @@
         "feat:todo-crud",
         "native:priority-decay"
       ],
-      "derivation_reason": "Joint Multi-Cell Fused implementation span (`web_ui::handle_http_request`)",
-      "shared_substrates": [],
+      "derivation_reason": "Fused multi-feature code block (`web_ui::dispatch_http_request`)",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
       "applied_pins": [
         "EXC-003-crud-vs-tags"
       ],
@@ -417,9 +461,9 @@
         "cap:web-ui",
         "feat:tags-and-search"
       ],
-      "derivation_reason": "Quantifier in 'cap:web-ui' matched 'feat:tags-and-search' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "derivation_reason": "Rule in 'cap:web-ui' applies to 'feat:tags-and-search' (matched shared resource [Viewport:TodoList]) -> Project onto interactive Web UI dashboard with confirmation guard",
       "shared_substrates": [
-        "Viewport:TodoList"
+        "DBTable:todos"
       ],
       "applied_pins": [],
       "incident_guards": []
@@ -430,9 +474,9 @@
         "cap:web-ui",
         "feat:todo-crud"
       ],
-      "derivation_reason": "Quantifier in 'cap:web-ui' matched 'feat:todo-crud' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "derivation_reason": "Rule in 'cap:web-ui' applies to 'feat:todo-crud' (matched shared resource [Viewport:TodoList]) -> Project onto interactive Web UI dashboard with confirmation guard",
       "shared_substrates": [
-        "Viewport:TodoList"
+        "DBTable:todos"
       ],
       "applied_pins": [],
       "incident_guards": []
@@ -443,9 +487,9 @@
         "cap:web-ui",
         "native:priority-decay"
       ],
-      "derivation_reason": "Quantifier in 'cap:web-ui' matched 'native:priority-decay' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "derivation_reason": "Rule in 'cap:web-ui' applies to 'native:priority-decay' (matched shared resource [Viewport:TodoList]) -> Project onto interactive Web UI dashboard with confirmation guard",
       "shared_substrates": [
-        "Viewport:TodoList"
+        "DBTable:todos"
       ],
       "applied_pins": [],
       "incident_guards": []
@@ -455,9 +499,9 @@
       "features": [
         "cap:web-ui"
       ],
-      "derivation_reason": "Basis self-slice [L2 (UX & Platform Projection)]",
+      "derivation_reason": "Base specification [UI & Platform]",
       "shared_substrates": [
-        "Viewport:TodoList"
+        "DBTable:todos"
       ],
       "applied_pins": [],
       "incident_guards": []
@@ -469,8 +513,11 @@
         "feat:tags-and-search",
         "feat:todo-crud"
       ],
-      "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::complete_todo`)",
-      "shared_substrates": [],
+      "derivation_reason": "Fused multi-feature code block (`TodoStore::complete_todo`)",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
       "applied_pins": [
         "EXC-002-crud-vs-recurring",
         "EXC-003-crud-vs-tags",
@@ -486,7 +533,7 @@
         "feat:recurring-tasks",
         "feat:tags-and-search"
       ],
-      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "derivation_reason": "Both touch shared resource [DBTable:todos, Viewport:TodoList]",
       "shared_substrates": [
         "DBTable:todos",
         "Viewport:TodoList"
@@ -502,7 +549,7 @@
         "feat:recurring-tasks",
         "feat:todo-crud"
       ],
-      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "derivation_reason": "Both touch shared resource [DBTable:todos, Viewport:TodoList]",
       "shared_substrates": [
         "DBTable:todos",
         "Viewport:TodoList"
@@ -520,7 +567,7 @@
         "feat:recurring-tasks",
         "native:priority-decay"
       ],
-      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "derivation_reason": "Both touch shared resource [DBTable:todos, Viewport:TodoList]",
       "shared_substrates": [
         "DBTable:todos",
         "Viewport:TodoList"
@@ -533,7 +580,7 @@
       "features": [
         "feat:recurring-tasks"
       ],
-      "derivation_reason": "Basis self-slice [L0 (Domain Behavior)]",
+      "derivation_reason": "Base specification [Core Feature]",
       "shared_substrates": [
         "DBTable:todos",
         "Viewport:TodoList"
@@ -547,7 +594,7 @@
         "feat:tags-and-search",
         "feat:todo-crud"
       ],
-      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "derivation_reason": "Both touch shared resource [DBTable:todos, Viewport:TodoList]",
       "shared_substrates": [
         "DBTable:todos",
         "Viewport:TodoList"
@@ -563,7 +610,7 @@
         "feat:tags-and-search",
         "native:priority-decay"
       ],
-      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "derivation_reason": "Both touch shared resource [DBTable:todos, Viewport:TodoList]",
       "shared_substrates": [
         "DBTable:todos",
         "Viewport:TodoList"
@@ -576,7 +623,7 @@
       "features": [
         "feat:tags-and-search"
       ],
-      "derivation_reason": "Basis self-slice [L0 (Domain Behavior)]",
+      "derivation_reason": "Base specification [Core Feature]",
       "shared_substrates": [
         "DBTable:todos",
         "Viewport:TodoList"
@@ -590,7 +637,7 @@
         "feat:todo-crud",
         "native:priority-decay"
       ],
-      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "derivation_reason": "Both touch shared resource [DBTable:todos, Viewport:TodoList]",
       "shared_substrates": [
         "DBTable:todos",
         "Viewport:TodoList"
@@ -603,7 +650,7 @@
       "features": [
         "feat:todo-crud"
       ],
-      "derivation_reason": "Basis self-slice [L0 (Domain Behavior)]",
+      "derivation_reason": "Base specification [Core Feature]",
       "shared_substrates": [
         "DBTable:todos",
         "Viewport:TodoList"
@@ -616,7 +663,7 @@
       "features": [
         "native:priority-decay"
       ],
-      "derivation_reason": "Basis self-slice [L0 (Domain Behavior)]",
+      "derivation_reason": "Base specification [Core Feature]",
       "shared_substrates": [
         "DBTable:todos",
         "Viewport:TodoList"
@@ -632,17 +679,11 @@
         "feat:recurring-tasks",
         "feat:todo-crud"
       ],
-      "conflict_summary": "Both 'Users can create, list, and complete todo tasks' and 'Recurring tasks automatically spawn the next occurrence upon completion' mutate shared substrate [\"DBTable:todos\", \"Viewport:TodoList\"].",
-      "options": [
-        {
-          "option_id": "OPT-ATOMIC-COMPLETE-AND-SPAWN",
-          "label": "Atomic Complete & Spawn Next Cycle in Single Fused Mutation",
-          "business_impact": "Completing a recurring task immediately shows the newly scheduled next occurrence in the same list refresh.",
-          "estimated_cost_or_latency": "0ms extra round-trip"
-        }
-      ],
-      "chosen_option": "OPT-ATOMIC-COMPLETE-AND-SPAWN",
-      "resolution_directive": "Fuse recurring task roll-forward directly inside the task completion transaction when recurrence_days is present AND the canary flag `flag_recurring_tasks` is enabled."
+      "conflict_summary": "When a user marks a recurring task as completed, when should the next cycle's task be created?",
+      "options": [],
+      "alternatives": [],
+      "chosen_option": "Complete the current task and spawn next cycle's pending task atomically in the same step (when `flag_recurring_tasks` canary is enabled).",
+      "resolution_directive": ""
     },
     "EXC-003-crud-vs-tags": {
       "id": "EXC-003-crud-vs-tags",
@@ -650,17 +691,11 @@
         "feat:tags-and-search",
         "feat:todo-crud"
       ],
-      "conflict_summary": "Both 'Users can create, list, and complete todo tasks' and 'Users can organize tasks with project tags, search keywords, and filter views' mutate shared substrate [\"DBTable:todos\", \"Viewport:TodoList\"].",
-      "options": [
-        {
-          "option_id": "OPT-INLINE-TAG-EXTRACTION",
-          "label": "Inline Tag Extraction & Fused Filter Pipeline (Recommended)",
-          "business_impact": "Users can pass tags explicitly or inline (`#work`), and filtering happens prior to urgency sorting.",
-          "estimated_cost_or_latency": "0ms extra round-trip"
-        }
-      ],
-      "chosen_option": "OPT-INLINE-TAG-EXTRACTION",
-      "resolution_directive": "Normalize and deduplicate #tags directly inside TodoItem creation and fuse tag/keyword filtering into the cached list query pipeline."
+      "conflict_summary": "How should project #tags be attached when a user creates or filters todo tasks?",
+      "options": [],
+      "alternatives": [],
+      "chosen_option": "Automatically extract inline #tags from the task title on creation and filter by #tag or search keyword before sorting by urgency.",
+      "resolution_directive": ""
     },
     "EXC-004-recurring-vs-tags": {
       "id": "EXC-004-recurring-vs-tags",
@@ -668,17 +703,11 @@
         "feat:recurring-tasks",
         "feat:tags-and-search"
       ],
-      "conflict_summary": "Both 'Recurring tasks automatically spawn the next occurrence upon completion' and 'Users can organize tasks with project tags, search keywords, and filter views' mutate shared substrate [\"DBTable:todos\", \"Viewport:TodoList\"].",
-      "options": [
-        {
-          "option_id": "OPT-INHERIT-TAGS-ON-SPAWN",
-          "label": "Carry Forward #Tags to Spawned Recurring Occurrences (Recommended)",
-          "business_impact": "Recurring tasks keep their project tags (#ops, #weekly) across every future cycle.",
-          "estimated_cost_or_latency": "0ms overhead"
-        }
-      ],
-      "chosen_option": "OPT-INHERIT-TAGS-ON-SPAWN",
-      "resolution_directive": "When a recurring task is completed and spawns its next cycle occurrence, automatically carry forward all #tags from the completed parent task."
+      "conflict_summary": "When a recurring task completes and spawns next week's task, what happens to its #tags?",
+      "options": [],
+      "alternatives": [],
+      "chosen_option": "Automatically carry forward all #tags from the completed task to the newly spawned task.",
+      "resolution_directive": ""
     },
     "PARETO-001-cache-vs-gdpr": {
       "id": "PARETO-001-cache-vs-gdpr",
@@ -686,23 +715,14 @@
         "cap:fast-cache-sla",
         "cap:gdpr-privacy"
       ],
-      "conflict_summary": "PACELC Tradeoff between 'Sub-25ms Read Latency SLA via Write-Through Memory Cache' (<25ms cached reads) and 'EU Privacy Safe (GDPR Right to Erasure & Portability)' (0ms stale PII after erasure).",
-      "options": [
-        {
-          "option_id": "OPT-SYNCHRONOUS-INVALIDATION",
-          "label": "Write-Through Cache Purge on GDPR Erase (Recommended)",
-          "business_impact": "Normal Todo reads stay fast (<2ms via in-memory cache); GDPR erasure synchronously zeroes the cache before returning.",
-          "estimated_cost_or_latency": "Read p99: 1.2ms | Erase p99: 4.5ms"
-        },
-        {
-          "option_id": "OPT-NO-CACHE-STRICT",
-          "label": "Disable Read Caching for PII Entities",
-          "business_impact": "Guaranteed zero cache lag, but list queries hit primary storage on every view.",
-          "estimated_cost_or_latency": "Read p99: 18ms | Erase p99: 2.0ms"
-        }
+      "conflict_summary": "How should the sub-25ms memory cache behave when a user clicks GDPR Erase?",
+      "options": [],
+      "alternatives": [
+        "Clear cache immediately on GDPR erase (Chosen: <2ms reads, 0ms stale data)",
+        "Disable caching for personal tasks (~18ms disk reads on every view)"
       ],
-      "chosen_option": "OPT-SYNCHRONOUS-INVALIDATION",
-      "resolution_directive": "Maintain in-memory read cache for sub-25ms reads, but execute synchronous cache key eviction inside the atomic GDPR erasure transaction before returning."
+      "chosen_option": "Clear the in-memory read cache immediately inside the GDPR erase step before returning (0ms stale data).",
+      "resolution_directive": ""
     }
   },
   "incidents": {
@@ -713,95 +733,137 @@
         "feat:recurring-tasks",
         "feat:todo-crud"
       ],
-      "what_happened": "At 03:12 UTC, a mobile client sent two concurrent complete_todo(#42) requests during a network retry. Both saw recurrence_days=7 and spawned two duplicate future tasks.",
-      "stage": {
-        "stage": "lifted_invariant",
-        "negative_invariant": "Completing an already-Completed task must be an idempotent no-op and must NEVER spawn a second recurring task instance.",
-        "regression_test_name": "test_inc_001_idempotent_complete_never_spawns_duplicate_recurrence"
-      }
+      "what_happened": "A client sent two concurrent complete requests during a network retry, causing two duplicate recurring tasks to spawn.",
+      "never_again": "Completing an already-Completed task must be a safe no-op and NEVER spawn a second recurring task.",
+      "test": "test_inc_001_idempotent_complete_never_spawns_duplicate_recurrence",
+      "stage": null
     }
   },
   "code_spans": [
     {
       "file_path": "src/lib.rs",
-      "symbol": "TodoItem",
-      "cell_coordinate": "I(feat:tags-and-search ∩ feat:todo-crud)",
-      "start_line": 18,
-      "end_line": 71,
-      "content_sha256": "cab6c59eed7c58ef498a9cedd22d9839e7a7969cbf97af369826da47e8589cc9",
-      "verification_tests": [
-        "test_create_and_complete_todo",
-        "test_tags_extraction_and_search_filter"
-      ]
-    },
-    {
-      "file_path": "src/lib.rs",
       "symbol": "TodoStore::create_todo",
       "cell_coordinate": "I(feat:tags-and-search ∩ feat:todo-crud)",
-      "start_line": 73,
-      "end_line": 219,
-      "content_sha256": "d8ff83e45f238d2f8b4bfbd0c95ff39299b9cf4132dd7da36da44729130b6b1a",
+      "features": [
+        "feat:tags-and-search",
+        "feat:todo-crud"
+      ],
+      "start_line": 24,
+      "end_line": 218,
+      "content_sha256": "57c1b7a795267c567c5742364e1cfda6b478311c5f66885f7844443c554d6604",
       "verification_tests": [
         "test_create_and_complete_todo",
+        "test_tags_extraction_and_search_filter",
         "test_persistent_disk_roundtrip"
-      ]
+      ],
+      "active_pins": [
+        "EXC-003-crud-vs-tags"
+      ],
+      "active_incidents": []
     },
     {
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::complete_todo",
       "cell_coordinate": "I(feat:recurring-tasks ∩ feat:tags-and-search ∩ feat:todo-crud)",
-      "start_line": 221,
-      "end_line": 282,
-      "content_sha256": "1d2c0c0472cb9bdf36e9dac7bbac6c7a38ac3f145178d3dfc0ad8f13850e0fe5",
+      "features": [
+        "feat:recurring-tasks",
+        "feat:tags-and-search",
+        "feat:todo-crud"
+      ],
+      "start_line": 220,
+      "end_line": 281,
+      "content_sha256": "c89e2976f4165b7aa739d5b34f7fb592393f77d7f07bd8d5ea919cff5f893e59",
       "verification_tests": [
         "test_recurring_task_spawns_next_cycle",
         "test_inc_001_idempotent_complete_never_spawns_duplicate_recurrence"
+      ],
+      "active_pins": [
+        "EXC-002-crud-vs-recurring",
+        "EXC-003-crud-vs-tags",
+        "EXC-004-recurring-vs-tags"
+      ],
+      "active_incidents": [
+        "INC-001-double-complete-spawn"
       ]
     },
     {
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::list_todos_sorted",
       "cell_coordinate": "I(cap:fast-cache-sla ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
-      "start_line": 284,
-      "end_line": 350,
-      "content_sha256": "0c7e935ddffa76224510fbe61ecf4ce70166c373f4dee52e09b48e53f0b6dbd2",
+      "features": [
+        "cap:fast-cache-sla",
+        "feat:tags-and-search",
+        "feat:todo-crud",
+        "native:priority-decay"
+      ],
+      "start_line": 283,
+      "end_line": 349,
+      "content_sha256": "dd2fa04ac9574fe32cc0c892cb0e06a19bfa6698dcbdc0e9dec02c4150c865b7",
       "verification_tests": [
         "test_cached_list_sorted_by_native_urgency",
         "test_tags_extraction_and_search_filter"
-      ]
+      ],
+      "active_pins": [
+        "EXC-003-crud-vs-tags"
+      ],
+      "active_incidents": []
     },
     {
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::gdpr_erase_and_export",
       "cell_coordinate": "I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)",
-      "start_line": 352,
-      "end_line": 371,
-      "content_sha256": "c0aa4700eaf72d059532eaf7b374e8cfc1bba78b16f3b97361fdee2895e473bb",
+      "features": [
+        "cap:fast-cache-sla",
+        "cap:gdpr-privacy",
+        "feat:todo-crud"
+      ],
+      "start_line": 351,
+      "end_line": 370,
+      "content_sha256": "53eab6a0a809af4ad6b68544fb26ad1bc3effbe4e63230ed533f82b67c099c36",
       "verification_tests": [
         "test_gdpr_erasure_wipes_storage_and_cache_synchronously"
-      ]
+      ],
+      "active_pins": [
+        "PARETO-001-cache-vs-gdpr"
+      ],
+      "active_incidents": []
     },
     {
       "file_path": "src/native_priority.rs",
       "symbol": "compute_urgency_score",
       "cell_coordinate": "I(native:priority-decay)",
+      "features": [
+        "native:priority-decay"
+      ],
       "start_line": 6,
       "end_line": 22,
       "content_sha256": "95c56f519978c9420883191df8ea67229245c99ea560bf1b5cdbf511dc8375a4",
       "verification_tests": [
         "test_native_urgency_monotonicity"
-      ]
+      ],
+      "active_pins": [],
+      "active_incidents": []
     },
     {
       "file_path": "src/web_ui.rs",
-      "symbol": "web_ui::handle_http_request",
+      "symbol": "web_ui::dispatch_http_request",
       "cell_coordinate": "I(cap:web-ui ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
-      "start_line": 12,
-      "end_line": 406,
-      "content_sha256": "190a006f2c912b26c801abbee7519207665d4775298e59ce3b408cec093c0be6",
+      "features": [
+        "cap:web-ui",
+        "feat:tags-and-search",
+        "feat:todo-crud",
+        "native:priority-decay"
+      ],
+      "start_line": 13,
+      "end_line": 502,
+      "content_sha256": "6928f695a415362b14fdbd5b4ce4ec7a5060c7006815db152fc7c4d81f349c03",
       "verification_tests": [
         "test_web_ui_rest_api_and_dashboard_html"
-      ]
+      ],
+      "active_pins": [
+        "EXC-003-crud-vs-tags"
+      ],
+      "active_incidents": []
     }
   ]
 }

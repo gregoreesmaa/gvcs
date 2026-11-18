@@ -1,12 +1,7 @@
-@id: cap:fast-cache-sla
-@stratum: L3
-@tag: read_query
-@substrate: DBTable:todos, Budget:Latency25ms
-
 Capability: Sub-25ms Read Latency SLA via Write-Through Memory Cache
-  Quantifier: For ANY feature that performs a read_query on DBTable:todos, serve results from an in-memory read cache under 25ms p99.
+  Rule: For ANY feature that lists or searches todo tasks, serve results from an in-memory read cache under 25ms p99.
 
   Scenario: Cached task list retrieval
-    Given a user's todo list has been queried once
-    When subsequent list queries arrive without intervening mutations
-    Then the response is served directly from the in-memory read cache
+    Given a user's todo list has been viewed once
+    When subsequent list queries arrive without changes
+    Then the response is served directly from the in-memory read cache under 25ms

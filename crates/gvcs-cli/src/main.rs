@@ -7,8 +7,8 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(
     name = "gvcs",
-    version = "0.1.0",
-    about = "Graph Version Control System (gvcs) — N-Dimensional Feature Hypergraph & AST Provenance Control Plane"
+    version = "0.2.0",
+    about = "gvcs — Feature-Aware Version Control (Maps Features, Overlaps & Decisions to Code)"
 )]
 struct Cli {
     /// Path to the gvcs project root (defaults to current directory or `examples/todo-app`).
@@ -21,24 +21,28 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Display the N-Dimensional Feature Hypergraph, Stratified Vectors (L0..L3), and Intersection Cells I(A ∩ B).
-    Status,
-    /// Synchronize specifications, resolve Intersection Cells, and write the deterministic `provenance.lock`.
+    /// Show the Feature Map: active features, where they meet in `src/`, and governing product decisions.
+    Status {
+        /// Also list all pairwise theoretical rule overlaps that were absorbed into fused code blocks.
+        #[arg(short, long, default_value_t = false)]
+        verbose: bool,
+    },
+    /// Synchronize `specs/` and `src/` code blocks into `provenance.lock`.
     Sync,
-    /// Run Tier-1/Tier-2 Adherence & Tourniquet Drift Verification (`provenance.lock` vs committed `src/`).
+    /// Verify spec-to-code alignment (`provenance.lock` vs `src/`), product decisions, and bug guards.
     Check,
-    /// Slice the codebase by a feature ID, showing all Intersection Cells I(S) and exact source code spans in `src/`.
+    /// Show every code block in `src/`, product decision, and test connected to a specific feature.
     Slice {
-        /// Feature ID or substring to slice (e.g., `gdpr-privacy`, `recurring-tasks`, `todo-crud`).
+        /// Feature ID or name to slice (e.g., `gdpr-privacy`, `recurring-tasks`, `web-ui`).
         feature: String,
     },
-    /// Simulate removing or deprecating a feature (`what-if`), showing exact cells and code spans that will be excised.
+    /// Preview the exact blast radius of removing a feature (`[DELETE]` vs `[SIMPLIFY]` code blocks).
     WhatIf {
-        /// Feature ID or substring to simulate removing.
+        /// Feature ID or name to simulate removing.
         #[arg(long)]
         remove: String,
     },
-    /// Show the Feature Marketplace blueprints, Native Escape-Hatch cells (@native), and Incident Invariants (.incident).
+    /// Inspect Marketplace blueprints, handwritten `@native` modules, decisions, and bug guards.
     Inspect,
 }
 
@@ -63,7 +67,7 @@ fn main() -> Result<()> {
     let ws = GvcsWorkspace::load(&root)?;
 
     match cli.command {
-        Commands::Status => cmd_status(&ws),
+        Commands::Status { verbose } => cmd_status(&ws, verbose),
         Commands::Sync => cmd_sync(&ws),
         Commands::Check => cmd_check(&ws),
         Commands::Slice { feature } => cmd_slice(&ws, &feature),
@@ -72,133 +76,198 @@ fn main() -> Result<()> {
     }
 }
 
-fn cmd_status(ws: &GvcsWorkspace) -> Result<()> {
+fn cmd_status(ws: &GvcsWorkspace, verbose: bool) -> Result<()> {
+    let hash = ws.compute_graph_state_hash();
+    let is_synced = ws
+        .existing_lock
+        .as_ref()
+        .map(|l| l.graph_state_hash == hash)
+        .unwrap_or(false);
+    let sync_badge = if is_synced {
+        "✓ synced".bright_green()
+    } else {
+        "⚠ unsynced (run `gvcs sync`)".bright_yellow()
+    };
+
     println!(
         "{}",
-        "========================================================================".bright_blue()
+        "================================================================================"
+            .bright_blue()
     );
     println!(
-        "{}  Project: {}",
-        "gvcs hypergraph status".bold().bright_cyan(),
-        ws.root.display()
-    );
-    println!(
-        "{}       {}",
-        "Graph Merkle Hash:".dimmed(),
-        ws.compute_graph_state_hash().bright_yellow()
+        "{} — {} (lock: {} {})",
+        "gvcs status".bold().bright_cyan(),
+        ws.root.display(),
+        &hash[..8].bright_yellow(),
+        sync_badge
     );
     println!(
         "{}",
-        "========================================================================".bright_blue()
+        "================================================================================"
+            .bright_blue()
     );
 
     println!(
-        "\n{} ({} active vectors, stratified L_base -> L3):",
-        "1. FEATURE VECTORS".bold().bright_white(),
+        "\n{} ({} active in 4-Layer Priority Stack):",
+        "1. FEATURES & CAPABILITIES".bold().bright_white(),
         ws.features.len()
     );
     for feat in ws.features.values() {
         let kind_badge = match &feat.kind {
-            SpecKind::Feature => "[Feature]".bright_green(),
-            SpecKind::Capability => "[Capability]".bright_magenta(),
+            SpecKind::Feature => "Feature".bright_green(),
+            SpecKind::Capability => "Capability".bright_magenta(),
             SpecKind::MarketplaceBlueprint { package, version } => {
-                format!("[Marketplace: {}@{}]", package, version).bright_cyan()
+                format!("Marketplace ({}@{})", package, version).bright_cyan()
             }
             SpecKind::NativeCell { source_path, .. } => {
-                format!("[@native: {}]", source_path).bright_yellow()
+                format!("@native ({})", source_path).bright_yellow()
             }
         };
-        let lifecycle_badge = match &feat.lifecycle {
-            LifecycleState::Ga => "GA(100%)".green(),
+        let rollout_badge = match &feat.lifecycle {
+            LifecycleState::Ga => "Live (100%)".green(),
             LifecycleState::Canary { percentage, flag } => {
-                format!("CANARY({}%, flag={})", percentage, flag).yellow()
+                format!("Canary ({}% flag={})", percentage, flag).yellow()
             }
             LifecycleState::Deprecated {
                 min_client_version, ..
-            } => format!("DEPRECATED(min={})", min_client_version).red(),
-            LifecycleState::Shadow => "SHADOW".dimmed(),
-            LifecycleState::DualWrite => "DUAL_WRITE".cyan(),
-            LifecycleState::Purged => "PURGED".strikethrough(),
+            } => format!("Deprecated (min={})", min_client_version).red(),
         };
 
         println!(
-            "  • {:<26} {:<30} {} [{}]",
+            "  • {:<24} {:<18} {:<20} [{}] — {}",
             feat.id.bold(),
-            kind_badge,
             feat.stratum.label().dimmed(),
-            lifecycle_badge
+            kind_badge,
+            rollout_badge,
+            feat.title
         );
-        if !feat.substrates.is_empty() {
-            println!(
-                "      Substrates: {:?}",
-                feat.substrates.iter().collect::<Vec<_>>()
-            );
-        }
         for q in &feat.quantifiers {
-            println!(
-                "      {} \"{}\"",
-                "Quantifier:".bright_magenta(),
-                q.statement
-            );
+            println!("      {} \"{}\"", "Global Rule:".bright_magenta(), q.statement);
         }
     }
 
     println!(
-        "\n{} ({} resolved hyperedges $I_{{A \\cap B}}$):",
-        "2. INTERSECTION CELLS".bold().bright_white(),
-        ws.cells.len()
+        "\n{} ({} linked code blocks in `src/`):",
+        "2. ACTIVE CODE INTERSECTIONS (Where Features Meet in Code)"
+            .bold()
+            .bright_white(),
+        ws.current_spans.len()
     );
-    for cell in ws.cells.values() {
-        let span_count = ws
-            .current_spans
-            .iter()
-            .filter(|s| s.cell_coordinate == cell.coordinate)
-            .count();
-        let pin_info = if cell.applied_pins.is_empty() {
-            String::new()
-        } else {
-            format!(" [Pins: {}]", cell.applied_pins.join(", "))
-                .bright_yellow()
-                .to_string()
-        };
-        let inc_info = if cell.incident_guards.is_empty() {
-            String::new()
-        } else {
-            format!(" [Incidents: {}]", cell.incident_guards.join(", "))
-                .bright_red()
-                .to_string()
-        };
-
+    for span in &ws.current_spans {
+        let loc = format!("{}:{}..{}", span.file_path, span.start_line, span.end_line);
+        let human_feats = IntersectionCell::format_human_list(&span.cell_coordinate);
         println!(
-            "  • {:<48} ({} spans in src/){}{}",
-            cell.coordinate.bold().bright_cyan(),
-            span_count,
-            pin_info,
-            inc_info
+            "  • {:<28} {}",
+            loc.bold().bright_green(),
+            span.symbol.bold().bright_white()
         );
-        println!("      Reason: {}", cell.derivation_reason.dimmed());
+        println!("      Features:  {}", human_feats.bright_cyan());
+        if !span.active_pins.is_empty() {
+            println!(
+                "      Decisions: {}",
+                span.active_pins.join(", ").bright_yellow()
+            );
+        }
+        if !span.active_incidents.is_empty() {
+            println!(
+                "      Bug Guard: {}",
+                span.active_incidents.join(", ").bright_red()
+            );
+        }
+        if !span.verification_tests.is_empty() {
+            println!(
+                "      Verified:  {}",
+                span.verification_tests.join(", ").dimmed()
+            );
+        }
+    }
+
+    let absorbed_count = ws
+        .cells
+        .values()
+        .filter(|c| {
+            !ws.current_spans
+                .iter()
+                .any(|s| s.cell_coordinate == c.coordinate)
+        })
+        .count();
+
+    if verbose {
+        println!(
+            "\n  {} ({}):",
+            "Pairwise Rule Overlaps (absorbed into fused code blocks above)".dimmed(),
+            absorbed_count
+        );
+        for cell in ws.cells.values() {
+            let has_direct_span = ws
+                .current_spans
+                .iter()
+                .any(|s| s.cell_coordinate == cell.coordinate);
+            if !has_direct_span {
+                println!(
+                    "    - {} — {}",
+                    IntersectionCell::format_human_list(&cell.coordinate).dimmed(),
+                    cell.derivation_reason.dimmed()
+                );
+            }
+        }
+    } else if absorbed_count > 0 {
+        println!(
+            "  {}",
+            format!(
+                "({} pairwise rule checks absorbed into the fused code blocks above; pass `--verbose` to list all)",
+                absorbed_count
+            )
+            .dimmed()
+        );
     }
 
     println!(
-        "\n{} ({} tradeoffs/collisions evaluated):",
-        "3. PARETO TRADEOFF & EXCEPTION PINS (E)".bold().bright_white(),
-        ws.conflicts.len()
+        "\n{} ({} decisions, {} bug guard):",
+        "3. PRODUCT DECISIONS & BUG GUARDS".bold().bright_white(),
+        ws.exceptions.len(),
+        ws.incidents.len()
     );
-    for c in &ws.conflicts {
-        if c.is_resolved {
-            println!(
-                "  {} {:<36} -> Resolved by Pin '{}'",
-                "✓".bright_green(),
-                IntersectionCell::format_coordinate(&c.features).bold(),
-                c.resolved_by_pin.as_deref().unwrap_or("unknown").bright_yellow()
-            );
-        } else {
-            println!(
-                "  {} {:<36} -> UNRESOLVED: {}",
-                "✗".bright_red(),
-                IntersectionCell::format_coordinate(&c.features).bold(),
-                c.summary
-            );
+    for pin in ws.exceptions.values() {
+        let pair = pin.features.iter().cloned().collect::<Vec<_>>().join(" × ");
+        println!(
+            "  {} {:<28} [{}]",
+            "✓".bright_green().bold(),
+            pin.id.bold().bright_yellow(),
+            pair.bright_cyan()
+        );
+        println!("      Decision: {}", pin.effective_directive());
+    }
+    for inc in ws.incidents.values() {
+        let pair = inc
+            .affected_features
+            .iter()
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(" × ");
+        match inc.resolved_stage() {
+            IncidentStage::LiftedInvariant {
+                negative_invariant,
+                regression_test_name,
+            } => {
+                println!(
+                    "  {} {:<28} [{}] (Permanent Bug Guard)",
+                    "🛡".bright_red(),
+                    inc.id.bold().bright_red(),
+                    pair.bright_cyan()
+                );
+                println!("      Rule: \"{}\"", negative_invariant);
+                println!("      Test: {}", regression_test_name.dimmed());
+            }
+            IncidentStage::Tourniquet { expires_at, .. } => {
+                println!(
+                    "  {} {:<28} [{}] (72h Hotfix Grace Period — expires {})",
+                    "⚠".bright_yellow(),
+                    inc.id.bold().bright_yellow(),
+                    pair.bright_cyan(),
+                    expires_at
+                );
+            }
         }
     }
 
@@ -208,15 +277,15 @@ fn cmd_status(ws: &GvcsWorkspace) -> Result<()> {
 fn cmd_sync(ws: &GvcsWorkspace) -> Result<()> {
     let lock = ws.sync_and_write_lock()?;
     println!(
-        "{} Synchronized {} feature vectors, {} intersection cells, and {} committed code spans into {}",
+        "{} Synchronized {} features/capabilities, {} code blocks in `src/`, and {} decisions into {}",
         "✓".bright_green().bold(),
         lock.features.len(),
-        lock.cells.len(),
         lock.code_spans.len(),
+        lock.exceptions.len(),
         ws.root.join("provenance.lock").display()
     );
     println!(
-        "  Graph State Hash: {}",
+        "  Feature Lock Hash: {}",
         lock.graph_state_hash.bright_yellow()
     );
     Ok(())
@@ -225,22 +294,23 @@ fn cmd_sync(ws: &GvcsWorkspace) -> Result<()> {
 fn cmd_check(ws: &GvcsWorkspace) -> Result<()> {
     println!(
         "{}",
-        "Running gvcs Tier-1/Tier-2 Adherence & Tourniquet Drift Check...".bold()
+        "Checking spec-to-code alignment (provenance.lock vs src/)...".bold()
     );
 
     let mut failed = false;
 
-    // 1. Check unresolved Pareto conflicts
+    // 1. Check unresolved Feature Overlaps / Tradeoffs
     let unresolved: Vec<_> = ws.conflicts.iter().filter(|c| !c.is_resolved).collect();
     if !unresolved.is_empty() {
         failed = true;
         println!(
-            "\n{} {} Unresolved Feature Conflict(s) require a Product Owner Exception Pin:",
-            "✗ [CONFLICT GATE]".bright_red().bold(),
+            "\n{} {} Unresolved Feature Conflict(s) require a Product Decision:",
+            "✗".bright_red().bold(),
             unresolved.len()
         );
         for c in unresolved {
-            println!("  • {}", c.summary.bright_yellow());
+            let pair = c.features.iter().cloned().collect::<Vec<_>>().join(" × ");
+            println!("  • {} — {}", pair.bold().bright_cyan(), c.summary.bright_yellow());
             for opt in &c.options {
                 println!(
                     "      [{}] {} — {} ({})",
@@ -253,75 +323,73 @@ fn cmd_check(ws: &GvcsWorkspace) -> Result<()> {
         }
     } else {
         println!(
-            "  {} All {} cross-feature interactions & Pareto tradeoffs have explicit pins.",
-            "✓".bright_green(),
+            "  {} {:<20} {} feature interactions resolved (0 unresolved conflicts)",
+            "✓".bright_green().bold(),
+            "Product Decisions".bold(),
             ws.conflicts.len()
         );
     }
 
-    // 2. Check AST Provenance Drift (3 AM hotfixes vs provenance.lock)
+    // 2. Check Code Provenance Drift (3 AM manual edits vs provenance.lock)
     let drifts = ws.check_drifts();
     if !drifts.is_empty() {
         for d in &drifts {
             if d.has_active_tourniquet {
                 println!(
-                    "  {} Span '{}' in {} has an active 72h Tourniquet Pin (allowed temporary hotfix).",
-                    "⚠ [TOURNIQUET]".bright_yellow().bold(),
+                    "  {} {:<20} `{}` in {}:{}..{} has an active 72h Hotfix Grace Period.",
+                    "⚠".bright_yellow().bold(),
+                    "Hotfix Grace Period".bold(),
                     d.symbol,
-                    d.file_path
+                    d.file_path,
+                    d.start_line,
+                    d.end_line
                 );
             } else {
                 failed = true;
                 println!(
-                    "  {} Unregistered code edit detected in {} (`{}` in cell `{}`).\n      Run `gvcs sync` or create a 72h `.incident.toml` Tourniquet Pin to lift this hotfix into a Negative Invariant!",
-                    "✗ [DRIFT DETECTED]".bright_red().bold(),
+                    "  {} Unsynced code edit detected in {}:{}..{} (`{}`)\n      Features affected: {}\n      Fix: Run `gvcs sync` to lock this change, or add a `.incident.toml` if this is a 3 AM hotfix.",
+                    "✗".bright_red().bold(),
                     d.file_path,
-                    d.symbol,
-                    d.cell_coordinate
+                    d.start_line,
+                    d.end_line,
+                    d.symbol.bold(),
+                    IntersectionCell::format_human_list(&d.cell_coordinate).bright_cyan()
                 );
             }
         }
     } else {
         println!(
-            "  {} All {} committed code spans in `src/` match `provenance.lock` SHA-256 digests.",
-            "✓".bright_green(),
+            "  {} {:<20} {} code blocks in src/ match provenance.lock SHA-256 digests",
+            "✓".bright_green().bold(),
+            "Code Provenance".bold(),
             ws.current_spans.len()
         );
     }
 
-    // 3. Check active incidents
+    // 3. Check Bug Guards
+    let mut permanent_guards = 0;
+    let mut active_hotfixes = 0;
     for inc in ws.incidents.values() {
-        match &inc.stage {
-            IncidentStage::LiftedInvariant {
-                negative_invariant,
-                regression_test_name,
-            } => {
-                println!(
-                    "  {} Incident '{}' permanently lifted to Negative Invariant: \"{}\" (verified by `{}`)",
-                    "✓".bright_green(),
-                    inc.id.bold(),
-                    negative_invariant,
-                    regression_test_name.bright_cyan()
-                );
-            }
-            IncidentStage::Tourniquet { expires_at, .. } => {
-                println!(
-                    "  {} Incident '{}' is on a temporary AST Tourniquet Pin (expires {}).",
-                    "⚠".bright_yellow(),
-                    inc.id.bold(),
-                    expires_at
-                );
-            }
+        match inc.resolved_stage() {
+            IncidentStage::LiftedInvariant { .. } => permanent_guards += 1,
+            IncidentStage::Tourniquet { .. } => active_hotfixes += 1,
         }
     }
+    println!(
+        "  {} {:<20} {} permanent regression guard(s) active, {} temporary hotfix(es)",
+        "✓".bright_green().bold(),
+        "Bug Guards".bold(),
+        permanent_guards,
+        active_hotfixes
+    );
 
     if failed {
-        anyhow::bail!("gvcs adherence check failed.");
+        anyhow::bail!("gvcs check failed.");
     }
 
     println!(
         "\n{}",
-        "✓ gvcs check PASSED: Hermetic code, provenance spans, and exception pins are 100% aligned."
+        "✓ gvcs check passed — specs, product decisions, and src/ are 100% aligned."
             .bright_green()
             .bold()
     );
@@ -330,128 +398,188 @@ fn cmd_check(ws: &GvcsWorkspace) -> Result<()> {
 
 fn cmd_slice(ws: &GvcsWorkspace, feature: &str) -> Result<()> {
     let (cells, spans) = ws.slice_feature(feature);
+    let matched_feat = ws
+        .features
+        .values()
+        .find(|f| f.id == feature || f.id.contains(feature));
+
     println!(
-        "{} Slicing hypergraph for feature query '{}':",
+        "{} — {}",
         "gvcs slice".bold().bright_cyan(),
-        feature.bright_yellow()
+        matched_feat
+            .map(|f| format!("{} (\"{}\")", f.id, f.title))
+            .unwrap_or_else(|| feature.to_string())
+            .bright_yellow()
+            .bold()
     );
 
-    println!("\n  Participating Intersection Cells ({}):", cells.len());
-    for c in &cells {
-        println!("    • {} — {}", c.coordinate.bold().bright_cyan(), c.derivation_reason);
+    if let Some(f) = matched_feat {
+        println!(
+            "  Spec:   {} [Layer: {}]",
+            f.spec_path.bright_white(),
+            f.stratum.label()
+        );
+        for q in &f.quantifiers {
+            println!("  Rule:   \"{}\"", q.statement.bright_magenta());
+        }
     }
 
     println!(
-        "\n  Exact Committed Source Code Spans in `src/` ({}):",
+        "\n  {} ({} block(s)):",
+        "Code Blocks in `src/` Implementing This Feature".bold(),
         spans.len()
     );
     for s in &spans {
         println!(
-            "    • {} (lines {}..{}) — symbol `{}`",
+            "    • {}:{}..{} — `{}`",
             s.file_path.bold().bright_green(),
             s.start_line,
             s.end_line,
-            s.symbol.bright_white()
+            s.symbol.bold().bright_white()
         );
         println!(
-            "        Cell: {} | SHA256: {}.. | Tests: {:?}",
-            s.cell_coordinate.bright_cyan(),
-            &s.content_sha256[..12],
-            s.verification_tests
+            "        Features:  {}",
+            IntersectionCell::format_human_list(&s.cell_coordinate).bright_cyan()
+        );
+        if !s.active_pins.is_empty() {
+            println!(
+                "        Decisions: {}",
+                s.active_pins.join(", ").bright_yellow()
+            );
+        }
+        if !s.active_incidents.is_empty() {
+            println!(
+                "        Bug Guard: {}",
+                s.active_incidents.join(", ").bright_red()
+            );
+        }
+        println!(
+            "        Tests:     {} (SHA256: {}..)",
+            s.verification_tests.join(", ").dimmed(),
+            &s.content_sha256[..10].dimmed()
         );
     }
+
+    let coupled_features: std::collections::BTreeSet<String> = cells
+        .iter()
+        .flat_map(|c| c.features.iter().cloned())
+        .filter(|fid| !fid.contains(feature))
+        .collect();
+
+    if !coupled_features.is_empty() {
+        println!(
+            "\n  {}: {}",
+            "Overlapping Features & Policies".bold(),
+            coupled_features
+                .into_iter()
+                .collect::<Vec<_>>()
+                .join(", ")
+                .bright_cyan()
+        );
+    }
+
     Ok(())
 }
 
 fn cmd_what_if(ws: &GvcsWorkspace, remove: &str) -> Result<()> {
-    let (cells, spans) = ws.slice_feature(remove);
+    let (_, spans) = ws.slice_feature(remove);
+    let matched_feat = ws
+        .features
+        .values()
+        .find(|f| f.id == remove || f.id.contains(remove));
+    let target_id = matched_feat.map(|f| f.id.as_str()).unwrap_or(remove);
+
     println!(
-        "{} Simulating removal of feature '{}':",
+        "{} `{}`:",
         "gvcs what-if --remove".bold().bright_magenta(),
-        remove.bright_yellow()
+        target_id.bright_yellow().bold()
     );
+
     println!(
-        "  • {} Intersection Cell(s) ($I_S$ where '{}' $\\in S$) will be dropped:",
-        cells.len(),
-        remove
-    );
-    for c in &cells {
-        println!("      - {}", c.coordinate.bright_red());
-    }
-    println!(
-        "  • {} Fused Code Span(s) in `src/` will be cleanly excised/re-synthesized:",
-        spans.len()
+        "\n  {} ({} of {} code blocks affected):",
+        "1. Code Blocks to Delete or Simplify in `src/`".bold(),
+        spans.len(),
+        ws.current_spans.len()
     );
     for s in &spans {
-        println!(
-            "      - {}:{}..{} (`{}`)",
-            s.file_path, s.start_line, s.end_line, s.symbol
-        );
+        let remaining: Vec<String> = s
+            .features
+            .iter()
+            .filter(|f| !f.contains(remove))
+            .cloned()
+            .collect();
+        if remaining.is_empty() {
+            println!(
+                "    • {} {}:{}..{} — `{}` (solely owned by `{}`)",
+                "[DELETE]".bright_red().bold(),
+                s.file_path.bold(),
+                s.start_line,
+                s.end_line,
+                s.symbol.bold(),
+                target_id
+            );
+        } else {
+            println!(
+                "    • {} {}:{}..{} — `{}`",
+                "[SIMPLIFY]".bright_yellow().bold(),
+                s.file_path.bold(),
+                s.start_line,
+                s.end_line,
+                s.symbol.bold()
+            );
+            println!(
+                "        Currently combines: {}",
+                IntersectionCell::format_human_list(&s.cell_coordinate).dimmed()
+            );
+            println!(
+                "        After removal:      Retains only `{}`",
+                remaining.join(" + ").bright_cyan()
+            );
+        }
     }
-    let untouched_spans = ws.current_spans.len().saturating_sub(spans.len());
+
+    let retired_pins: Vec<&ExceptionPin> = ws
+        .exceptions
+        .values()
+        .filter(|p| p.features.iter().any(|f| f.contains(remove)))
+        .collect();
+    let retired_incidents: Vec<&IncidentRecord> = ws
+        .incidents
+        .values()
+        .filter(|i| i.affected_features.iter().any(|f| f.contains(remove)))
+        .collect();
+
+    if !retired_pins.is_empty() || !retired_incidents.is_empty() {
+        println!(
+            "\n  {} ({}):",
+            "2. Product Decisions & Bug Guards Retired".bold(),
+            retired_pins.len() + retired_incidents.len()
+        );
+        for p in retired_pins {
+            println!("    • Drops decision {}", p.id.bright_yellow());
+        }
+        for i in retired_incidents {
+            println!("    • Retires bug guard {}", i.id.bright_red());
+        }
+    }
+
+    let untouched = ws.current_spans.len().saturating_sub(spans.len());
+    let pct = if ws.current_spans.is_empty() {
+        100
+    } else {
+        (untouched * 100) / ws.current_spans.len()
+    };
+    println!("\n  {}:", "3. Untouched Code Guarantee".bold());
     println!(
-        "  • {} other code spans across the repository remain 100% UNTOUCHED (verified by SHA-256 lock).",
-        untouched_spans.to_string().bright_green().bold()
+        "    {} {} of {} code blocks ({}% of tracked codebase) remain 100% UNTOUCHED (verified by SHA-256 lock).",
+        "✓".bright_green().bold(),
+        untouched.to_string().bright_green().bold(),
+        ws.current_spans.len(),
+        pct
     );
     Ok(())
 }
 
 fn cmd_inspect(ws: &GvcsWorkspace) -> Result<()> {
-    println!(
-        "{}",
-        "=== GVCS SPECIALIZED ARTIFACTS (Marketplace, @native Escape Hatches, Incidents) ==="
-            .bold()
-            .bright_cyan()
-    );
-
-    println!("\n{}:", "A. Feature Marketplace Blueprints (@uses)".bold());
-    for f in ws.features.values() {
-        if let SpecKind::MarketplaceBlueprint { package, version } = &f.kind {
-            println!(
-                "  • {} -> {}@{} ({})",
-                f.id.bold(),
-                package.bright_cyan(),
-                version,
-                f.spec_path
-            );
-        }
-    }
-
-    println!("\n{}:", "B. Sealed @native Code Escape Hatches".bold());
-    for f in ws.features.values() {
-        if let SpecKind::NativeCell {
-            source_path,
-            entrypoint,
-        } = &f.kind
-        {
-            println!(
-                "  • {} -> `{}` (entrypoint: `{}`)",
-                f.id.bold(),
-                source_path.bright_yellow(),
-                entrypoint
-            );
-        }
-    }
-
-    println!(
-        "\n{}:",
-        "C. Incident Invariants (.incident.toml) & Exception Pins (.pareto.toml)".bold()
-    );
-    for e in ws.exceptions.values() {
-        println!(
-            "  • [Pin: {}] Chose '{}' -> {}",
-            e.id.bright_yellow().bold(),
-            e.chosen_option.bright_green(),
-            e.resolution_directive
-        );
-    }
-    for inc in ws.incidents.values() {
-        println!(
-            "  • [Incident: {}] {} -> {:?}",
-            inc.id.bright_red().bold(),
-            inc.title,
-            inc.stage
-        );
-    }
-    Ok(())
+    cmd_status(ws, false)
 }

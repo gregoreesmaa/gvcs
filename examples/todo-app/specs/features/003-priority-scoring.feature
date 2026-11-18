@@ -1,11 +1,7 @@
-@id: native:priority-decay
-@stratum: L0
-@native: src/native_priority.rs::compute_urgency_score
-@tag: read_query
-@substrate: DBTable:todos, Viewport:TodoList
+Native: src/native_priority.rs::compute_urgency_score
 
-Feature: Real-time Urgency Scoring Kernel (@native Code Escape Hatch)
-  Uses a permanent human-authored Rust mathematical kernel for exponential deadline urgency decay
-  rather than verbose natural-language prompt golf.
+Feature: Real-time Urgency Scoring Kernel
+  Tasks are ranked by a deterministic urgency score based on priority weight
+  and how many hours overdue they are, so critical work floats to the top of the todo list.
 
   Invariant: Urgency score is strictly monotonic with respect to priority weight and hours overdue.

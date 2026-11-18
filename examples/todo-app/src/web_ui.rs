@@ -1,7 +1,8 @@
 //! Web UI & REST API Projection (`cap:web-ui`).
 //!
-//! Added to replace `cap:cli-ux-shell` after removing `mkt:google-login` and `cap:cli-ux-shell`.
-//! Serves an interactive Single-Page Web Application + JSON REST API over `Viewport:TodoList`.
+//! Serves an interactive Single-Page Web Application + JSON REST API with a built-in
+//! **gvcs Provenance X-Ray** toggle so both engineers and laypeople can visually inspect
+//! which features, product decisions, and bug guards power every UI element and API action.
 
 use crate::{TodoFilter, TodoStore};
 use serde::{Deserialize, Serialize};
@@ -9,7 +10,7 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 
-// @gvcs-begin cell="I(cap:web-ui ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)" symbol="web_ui::handle_http_request" tests="test_web_ui_rest_api_and_dashboard_html"
+// @gvcs-begin cell="I(cap:web-ui ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)" symbol="web_ui::dispatch_http_request" tests="test_web_ui_rest_api_and_dashboard_html"
 #[derive(Debug, Deserialize)]
 pub struct CreateTodoRequest {
     pub title: String,
@@ -23,6 +24,7 @@ pub struct CreateTodoRequest {
 pub struct ListTodosResponse {
     pub items: Vec<crate::TodoItem>,
     pub cache_hit: bool,
+    pub canary_recurring_enabled: bool,
 }
 
 /// Processes a single HTTP request (method, path+query, body) against `TodoStore` and returns
@@ -38,13 +40,19 @@ pub fn dispatch_http_request(
         .unwrap_or((path_and_query, ""));
 
     match (method, path) {
-        ("GET", "/") | ("GET", "/index.html") => (200, "text/html; charset=utf-8", WEB_UI_HTML.to_string()),
+        ("GET", "/") | ("GET", "/index.html") => {
+            (200, "text/html; charset=utf-8", WEB_UI_HTML.to_string())
+        }
 
         ("GET", "/api/todos") => {
             let filter = parse_query_filter(query);
             match store.list_todos_filtered(&filter) {
                 Ok((items, cache_hit)) => {
-                    let resp = ListTodosResponse { items, cache_hit };
+                    let resp = ListTodosResponse {
+                        items,
+                        cache_hit,
+                        canary_recurring_enabled: store.flag_recurring_tasks,
+                    };
                     (
                         200,
                         "application/json",
@@ -91,14 +99,23 @@ pub fn dispatch_http_request(
                         "application/json",
                         serde_json::to_string(&serde_json::json!({
                             "completed": completed,
-                            "spawned_next": spawned
+                            "spawned_next": spawned,
+                            "governed_by": {
+                                "cell": "I(feat:recurring-tasks ∩ feat:tags-and-search ∩ feat:todo-crud)",
+                                "decisions": ["EXC-002-crud-vs-recurring", "EXC-004-recurring-vs-tags"],
+                                "bug_guard": "INC-001-double-complete-spawn"
+                            }
                         }))
                         .unwrap_or_else(|_| "{}".to_string()),
                     ),
                     Err(e) => (404, "application/json", format!("{{\"error\":\"{}\"}}", e)),
                 }
             } else {
-                (400, "application/json", "{\"error\":\"Invalid task ID\"}".to_string())
+                (
+                    400,
+                    "application/json",
+                    "{\"error\":\"Invalid task ID\"}".to_string(),
+                )
             }
         }
 
@@ -114,7 +131,11 @@ pub fn dispatch_http_request(
                     Err(e) => (404, "application/json", format!("{{\"error\":\"{}\"}}", e)),
                 }
             } else {
-                (400, "application/json", "{\"error\":\"Invalid task ID\"}".to_string())
+                (
+                    400,
+                    "application/json",
+                    "{\"error\":\"Invalid task ID\"}".to_string(),
+                )
             }
         }
 
@@ -124,12 +145,29 @@ pub fn dispatch_http_request(
                 "application/json",
                 serde_json::to_string(&serde_json::json!({
                     "wiped_count": wiped_count,
-                    "exported_archive": serde_json::from_str::<serde_json::Value>(&exported_json).unwrap_or(serde_json::Value::Null)
+                    "exported_archive": serde_json::from_str::<serde_json::Value>(&exported_json).unwrap_or(serde_json::Value::Null),
+                    "governed_by": {
+                        "cell": "I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)",
+                        "decision": "PARETO-001-cache-vs-gdpr"
+                    }
                 }))
                 .unwrap_or_else(|_| "{}".to_string()),
             ),
             Err(e) => (500, "application/json", format!("{{\"error\":\"{}\"}}", e)),
         },
+
+        ("POST", "/api/toggle-canary") => {
+            store.flag_recurring_tasks = !store.flag_recurring_tasks;
+            let _ = store.flush_to_disk();
+            (
+                200,
+                "application/json",
+                format!(
+                    "{{\"canary_recurring_enabled\":{}}}",
+                    store.flag_recurring_tasks
+                ),
+            )
+        }
 
         ("POST", "/api/seed") => {
             store.seed_default_demo_tasks();
@@ -223,7 +261,7 @@ const WEB_UI_HTML: &str = r#"<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>gvcs Todo App — Web UI Projection</title>
+  <title>gvcs Todo App — Feature-Aware Web UI Showcase</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -235,44 +273,56 @@ const WEB_UI_HTML: &str = r#"<!DOCTYPE html>
       --urgent: #f43f5e;
       --success: #10b981;
       --purple: #a855f7;
+      --amber: #f59e0b;
     }
     * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-    body { margin: 0; padding: 32px 16px; background: var(--bg); color: var(--text); display: flex; justify-content: center; }
-    .container { width: 100%; max-width: 860px; }
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
-    h1 { margin: 0; font-size: 1.45rem; display: flex; align-items: center; gap: 10px; }
+    body { margin: 0; padding: 28px 16px; background: var(--bg); color: var(--text); display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 920px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    h1 { margin: 0; font-size: 1.35rem; display: flex; align-items: center; gap: 10px; }
     .badge-pill { font-size: 0.75rem; background: #0284c7; padding: 4px 10px; border-radius: 999px; font-weight: 600; }
-    .cache-indicator { font-size: 0.8rem; color: var(--muted); }
-    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
-    .form-row { display: grid; grid-template-columns: 1fr 110px 130px 120px auto; gap: 10px; }
-    input, select, button { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text); font-size: 0.9rem; }
+    .header-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .form-row { display: grid; grid-template-columns: 1fr 115px 125px 115px auto; gap: 10px; }
+    input, select, button { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text); font-size: 0.88rem; }
     button { cursor: pointer; background: var(--accent); color: #0f172a; font-weight: 700; border: none; transition: opacity 0.15s; }
     button:hover { opacity: 0.9; }
-    .filters { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); font-weight: 600; }
+    .btn-outline.active { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.1); }
+    .filters { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
     .task-list { display: flex; flex-direction: column; gap: 10px; }
-    .task-item { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+    .task-item { display: flex; justify-content: space-between; align-items: center; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; }
     .task-item.completed { opacity: 0.55; }
     .task-item.completed .task-title { text-decoration: line-through; }
-    .task-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .urgency-chip { font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #334155; color: var(--accent); }
+    .task-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .urgency-chip { font-size: 0.74rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #334155; color: var(--accent); }
     .urgency-chip.high { background: rgba(244,63,94,0.18); color: var(--urgent); border: 1px solid rgba(244,63,94,0.4); }
-    .tag-chip { font-size: 0.75rem; padding: 2px 8px; border-radius: 99px; background: rgba(56,189,248,0.15); color: var(--accent); cursor: pointer; }
-    .recur-chip { font-size: 0.75rem; padding: 2px 8px; border-radius: 99px; background: rgba(168,85,247,0.18); color: #c084fc; }
-    .footer-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }
+    .tag-chip { font-size: 0.74rem; padding: 2px 8px; border-radius: 99px; background: rgba(56,189,248,0.15); color: var(--accent); cursor: pointer; }
+    .recur-chip { font-size: 0.74rem; padding: 2px 8px; border-radius: 99px; background: rgba(168,85,247,0.18); color: #c084fc; }
+    .xray-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(148,163,184,0.25); font-size: 0.73rem; color: var(--muted); }
+    .xray-hidden .xray-bar { display: none !important; }
+    .xray-cell { background: rgba(16,185,129,0.15); color: #34d399; padding: 2px 7px; border-radius: 4px; font-family: monospace; }
+    .xray-pin { background: rgba(245,158,11,0.16); color: #fbbf24; padding: 2px 7px; border-radius: 4px; font-family: monospace; }
+    .xray-guard { background: rgba(244,63,94,0.16); color: #fb7185; padding: 2px 7px; border-radius: 4px; font-family: monospace; }
+    .footer-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 0.84rem; color: var(--muted); flex-wrap: wrap; gap: 10px; }
     .btn-danger { background: transparent; border: 1px solid var(--urgent); color: var(--urgent); }
     .btn-danger:hover { background: var(--urgent); color: white; }
-    .btn-sm { padding: 6px 10px; font-size: 0.8rem; }
-    pre { background: #020617; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 0.78rem; color: #38bdf8; }
+    .btn-sm { padding: 6px 10px; font-size: 0.78rem; }
+    pre { background: #020617; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 0.76rem; color: #38bdf8; }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" id="appRoot">
     <header>
       <h1>
         <span>⚡ gvcs Todo Workspace</span>
         <span class="badge-pill">cap:web-ui</span>
       </h1>
-      <div class="cache-indicator" id="cacheStatus">Sub-25ms Cache: --</div>
+      <div class="header-controls">
+        <button id="xrayBtn" class="btn-outline active btn-sm" onclick="toggleXray()">🔬 gvcs Provenance X-Ray: ON</button>
+        <button id="canaryBtn" class="btn-outline active btn-sm" onclick="toggleCanary()">🐤 Canary Recurring Tasks: ON</button>
+        <span style="font-size:0.78rem;color:var(--muted)" id="cacheStatus">Cache: --</span>
+      </div>
     </header>
 
     <div class="card">
@@ -289,20 +339,38 @@ const WEB_UI_HTML: &str = r#"<!DOCTYPE html>
         <input id="recurInput" type="number" placeholder="Recur (days)" title="Optional recurring interval in days" />
         <button onclick="createTodo()">+ Add Task</button>
       </div>
+      <div class="xray-bar">
+        <span>🔬 <strong>Code Block:</strong> <code>src/lib.rs::TodoStore::create_todo</code></span>
+        <span class="xray-cell">feat:todo-crud + feat:tags-and-search</span>
+        <span class="xray-pin">Decision: EXC-003 (Inline #tag extraction)</span>
+      </div>
     </div>
 
-    <div class="filters">
-      <input id="searchInput" placeholder="Search title or #tags..." oninput="loadTodos()" style="flex:1" />
-      <input id="tagInput" placeholder="Filter #tag (e.g. #work)" oninput="loadTodos()" style="width:180px" />
-      <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer">
-        <input type="checkbox" id="pendingOnlyInput" onchange="loadTodos()" /> Pending Only
-      </label>
+    <div class="card" style="padding: 12px 16px;">
+      <div class="filters" style="margin-bottom:0">
+        <input id="searchInput" placeholder="Search title or #tags..." oninput="loadTodos()" style="flex:1" />
+        <input id="tagInput" placeholder="Filter #tag (e.g. #work)" oninput="loadTodos()" style="width:180px" />
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer">
+          <input type="checkbox" id="pendingOnlyInput" onchange="loadTodos()" /> Pending Only
+        </label>
+      </div>
+      <div class="xray-bar">
+        <span>🔬 <strong>Fused Query:</strong> <code>src/lib.rs::TodoStore::list_todos_sorted</code></span>
+        <span class="xray-cell">feat:todo-crud + feat:tags-and-search + native:priority-decay + cap:fast-cache-sla</span>
+      </div>
     </div>
 
     <div class="task-list" id="taskList"></div>
 
     <div class="footer-bar">
-      <span>Engineered via <strong>gvcs</strong> Intersection Cells (<code>I(cap:web-ui ∩ feat:todo-crud ∩ native:priority-decay)</code>)</span>
+      <div>
+        <div>1-Click GDPR Portability & Right to Erasure</div>
+        <div class="xray-bar" style="border:none;padding-top:4px;margin-top:0">
+          <span>🔬 <code>src/lib.rs::TodoStore::gdpr_erase_and_export</code></span>
+          <span class="xray-cell">feat:todo-crud + cap:gdpr-privacy + cap:fast-cache-sla</span>
+          <span class="xray-pin">Decision: PARETO-001 (0ms Sync Cache Purge)</span>
+        </div>
+      </div>
       <button class="btn-danger btn-sm" onclick="triggerGdprErase()">⋯ 1-Click GDPR Export & Erase</button>
     </div>
 
@@ -310,14 +378,34 @@ const WEB_UI_HTML: &str = r#"<!DOCTYPE html>
   </div>
 
   <script>
+    let xrayOn = true;
+
+    function toggleXray() {
+      xrayOn = !xrayOn;
+      document.getElementById('appRoot').classList.toggle('xray-hidden', !xrayOn);
+      const btn = document.getElementById('xrayBtn');
+      btn.textContent = `🔬 gvcs Provenance X-Ray: ${xrayOn ? 'ON' : 'OFF'}`;
+      btn.classList.toggle('active', xrayOn);
+    }
+
+    async function toggleCanary() {
+      await fetch('/api/toggle-canary', { method: 'POST' });
+      loadTodos();
+    }
+
     async function loadTodos() {
       const search = encodeURIComponent(document.getElementById('searchInput').value.trim());
       const tag = encodeURIComponent(document.getElementById('tagInput').value.trim());
       const onlyPending = document.getElementById('pendingOnlyInput').checked;
       const res = await fetch(`/api/todos?search=${search}&tag=${tag}&only_pending=${onlyPending}`);
       const data = await res.json();
+
       document.getElementById('cacheStatus').textContent =
-        `cap:fast-cache-sla Hit: ${data.cache_hit ? 'true (<1ms)' : 'false (recomputed)'} | Tasks: ${data.items.length}`;
+        `cap:fast-cache-sla Hit: ${data.cache_hit ? 'true (<1ms)' : 'false'}`;
+
+      const canaryBtn = document.getElementById('canaryBtn');
+      canaryBtn.textContent = `🐤 Canary Recurring Tasks: ${data.canary_recurring_enabled ? 'ON (25%)' : 'OFF'}`;
+      canaryBtn.classList.toggle('active', data.canary_recurring_enabled);
 
       const list = document.getElementById('taskList');
       if (!data.items.length) {
@@ -331,15 +419,23 @@ const WEB_UI_HTML: &str = r#"<!DOCTYPE html>
         const tagsHtml = (item.tags || []).map(t => `<span class="tag-chip" onclick="filterByTag('${t}')">${t}</span>`).join('');
         const recurHtml = item.recurrence_days ? `<span class="recur-chip">↻ ${item.recurrence_days}d</span>` : '';
         return `
-          <div class="task-item ${isDone ? 'completed' : ''}">
-            <div class="task-left">
-              <input type="checkbox" ${isDone ? 'checked disabled' : ''} onchange="completeTodo(${item.id})" />
-              <span class="urgency-chip ${highUrgency ? 'high' : ''}">Urgency ${item.urgency_score.toFixed(1)} · P${item.priority_weight} · ${dueText}</span>
-              <span class="task-title" style="font-weight:600">${escapeHtml(item.title)}</span>
-              ${recurHtml}
-              ${tagsHtml}
+          <div class="task-item ${isDone ? 'completed' : ''}" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="task-left">
+                <input type="checkbox" ${isDone ? 'checked disabled' : ''} onchange="completeTodo(${item.id})" />
+                <span class="urgency-chip ${highUrgency ? 'high' : ''}" title="@native kernel: src/native_priority.rs">Urgency ${item.urgency_score.toFixed(1)} · P${item.priority_weight} · ${dueText}</span>
+                <span class="task-title" style="font-weight:600">${escapeHtml(item.title)}</span>
+                ${recurHtml}
+                ${tagsHtml}
+              </div>
+              <button class="btn-danger btn-sm" onclick="deleteTodo(${item.id})">✕</button>
             </div>
-            <button class="btn-danger btn-sm" onclick="deleteTodo(${item.id})">✕</button>
+            <div class="xray-bar">
+              <span>🔬 <strong>Complete Action:</strong> <code>TodoStore::complete_todo</code></span>
+              <span class="xray-cell">feat:todo-crud + feat:recurring-tasks + feat:tags-and-search</span>
+              <span class="xray-pin">EXC-002 & EXC-004</span>
+              <span class="xray-guard">🛡 Bug Guard: INC-001 (No duplicate spawn)</span>
+            </div>
           </div>
         `;
       }).join('');
@@ -390,7 +486,7 @@ const WEB_UI_HTML: &str = r#"<!DOCTYPE html>
       const data = await res.json();
       const box = document.getElementById('gdprResult');
       box.style.display = 'block';
-      box.innerHTML = `<strong>✓ GDPR Erasure Complete:</strong> Wiped ${data.wiped_count} row(s) & synchronously purged read cache (0ms stale PII).<pre>${escapeHtml(JSON.stringify(data.exported_archive, null, 2))}</pre>`;
+      box.innerHTML = `<strong>✓ GDPR Erasure Complete:</strong> Wiped ${data.wiped_count} row(s) & synchronously purged read cache (0ms stale PII, enforced by <code>${data.governed_by.decision}</code>).<pre>${escapeHtml(JSON.stringify(data.exported_archive, null, 2))}</pre>`;
       loadTodos();
     }
 
@@ -413,12 +509,12 @@ mod tests {
     fn test_web_ui_rest_api_and_dashboard_html() {
         let mut store = TodoStore::new(true);
 
-        // 1. GET / serves the interactive Web UI Single-Page App
+        // 1. GET / serves the interactive Web UI Single-Page App with Provenance X-Ray
         let (status, content_type, html) = dispatch_http_request(&mut store, "GET", "/", "");
         assert_eq!(status, 200);
         assert!(content_type.contains("text/html"));
         assert!(html.contains("gvcs Todo Workspace"));
-        assert!(html.contains("cap:web-ui"));
+        assert!(html.contains("gvcs Provenance X-Ray"));
 
         // 2. POST /api/todos creates a task with inline #tags
         let (status, _, body) = dispatch_http_request(

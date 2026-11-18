@@ -1,7 +1,7 @@
 use crate::model::*;
 use crate::parser::{parse_spec_file, sha256_normalized};
 use crate::provenance::{scan_source_provenance_spans, verify_provenance_drift, SpanDrift};
-use crate::solver::{resolve_hypergraph, DetectedConflict};
+use crate::solver::{build_intersection_cell, resolve_hypergraph, DetectedConflict};
 use anyhow::{Context, Result};
 use std::collections::BTreeMap;
 use std::fs;
@@ -22,14 +22,17 @@ pub struct GvcsWorkspace {
 }
 
 impl GvcsWorkspace {
-    /// Loads a `gvcs` project from disk, parsing all `.feature`, `.cap`, `.pareto.toml`,
-    /// and `.incident.toml` files, resolving the $N$-dimensional Intersection Cell hypergraph,
-    /// and scanning `src/` for `@gvcs-begin` provenance spans.
+    /// Loads a `gvcs` project from disk, parsing all `.feature`, `.cap`, Product Decision
+    /// (`.decision.toml` / `.pareto.toml` / `.exception.toml`), and Bug Guard (`.incident.toml`)
+    /// files, resolving the Feature Overlap Graph, and scanning `src/` for `@gvcs-begin` blocks.
     pub fn load(project_root: &Path) -> Result<Self> {
         let specs_dir = project_root.join("specs");
         let mut features = BTreeMap::new();
         let mut exceptions = BTreeMap::new();
         let mut incidents = BTreeMap::new();
+
+        let mut decision_paths = Vec::new();
+        let mut incident_paths = Vec::new();
 
         if specs_dir.exists() {
             for entry in WalkDir::new(&specs_dir).into_iter().filter_map(|e| e.ok()) {
@@ -40,18 +43,13 @@ impl GvcsWorkspace {
                 let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                 let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
-                if file_name.ends_with(".pareto.toml") || file_name.ends_with(".exception.toml") {
-                    let raw = fs::read_to_string(path)?;
-                    let pin: ExceptionPin = toml::from_str(&raw).with_context(|| {
-                        format!("Failed to parse Exception/Pareto pin: {}", path.display())
-                    })?;
-                    exceptions.insert(pin.id.clone(), pin);
+                if file_name.ends_with(".decision.toml")
+                    || file_name.ends_with(".pareto.toml")
+                    || file_name.ends_with(".exception.toml")
+                {
+                    decision_paths.push(path.to_path_buf());
                 } else if file_name.ends_with(".incident.toml") {
-                    let raw = fs::read_to_string(path)?;
-                    let inc: IncidentRecord = toml::from_str(&raw).with_context(|| {
-                        format!("Failed to parse Incident record: {}", path.display())
-                    })?;
-                    incidents.insert(inc.id.clone(), inc);
+                    incident_paths.push(path.to_path_buf());
                 } else if matches!(ext, "feature" | "cap") {
                     let fv = parse_spec_file(project_root, path)?;
                     features.insert(fv.id.clone(), fv);
@@ -59,43 +57,69 @@ impl GvcsWorkspace {
             }
         }
 
-        let ( mut cells, conflicts) = resolve_hypergraph(&features, &exceptions, &incidents);
-        let current_spans = scan_source_provenance_spans(project_root)?;
+        // Parse Product Decision Records (resolving bare feature names like "todo-crud" -> "feat:todo-crud")
+        for path in decision_paths {
+            let raw = fs::read_to_string(&path)?;
+            let mut pin: ExceptionPin = toml::from_str(&raw).with_context(|| {
+                format!("Failed to parse Product Decision record: {}", path.display())
+            })?;
+            if pin.id.trim().is_empty() {
+                let stem = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("decision")
+                    .split('.')
+                    .next()
+                    .unwrap_or("decision");
+                pin.id = stem.to_uppercase();
+            }
+            pin.features = pin
+                .features
+                .iter()
+                .map(|f| resolve_feature_slug(f, &features))
+                .collect();
+            exceptions.insert(pin.id.clone(), pin);
+        }
 
-        // Register any higher-order k-way fused cells (e.g., 3-way Joint Multi-Cell Fusions) present in `src/`
+        // Parse Bug Guard / Incident Records
+        for path in incident_paths {
+            let raw = fs::read_to_string(&path)?;
+            let mut inc: IncidentRecord = toml::from_str(&raw).with_context(|| {
+                format!("Failed to parse Incident record: {}", path.display())
+            })?;
+            if inc.id.trim().is_empty() {
+                let stem = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("incident")
+                    .split('.')
+                    .next()
+                    .unwrap_or("incident");
+                inc.id = stem.to_uppercase();
+            }
+            inc.affected_features = inc
+                .affected_features
+                .iter()
+                .map(|f| resolve_feature_slug(f, &features))
+                .collect();
+            incidents.insert(inc.id.clone(), inc);
+        }
+
+        let (mut cells, conflicts) = resolve_hypergraph(&features, &exceptions, &incidents);
+        let current_spans =
+            scan_source_provenance_spans(project_root, &features, &exceptions, &incidents)?;
+
+        // Register any higher-order k-way fused code blocks present in `src/`
         for span in &current_spans {
             if !cells.contains_key(&span.cell_coordinate) {
-                let inner = span
-                    .cell_coordinate
-                    .trim_start_matches("I(")
-                    .trim_end_matches(')');
-                let parsed_feats: std::collections::BTreeSet<String> = inner
-                    .split('∩')
-                    .map(|s| s.trim().to_string())
-                    .filter(|s| !s.is_empty())
-                    .collect();
-                cells.insert(
-                    span.cell_coordinate.clone(),
-                    IntersectionCell {
-                        coordinate: span.cell_coordinate.clone(),
-                        features: parsed_feats.clone(),
-                        derivation_reason: format!(
-                            "Joint Multi-Cell Fused implementation span (`{}`)",
-                            span.symbol
-                        ),
-                        shared_substrates: std::collections::BTreeSet::new(),
-                        applied_pins: exceptions
-                            .values()
-                            .filter(|p| p.features.is_subset(&parsed_feats))
-                            .map(|p| p.id.clone())
-                            .collect(),
-                        incident_guards: incidents
-                            .values()
-                            .filter(|i| i.affected_features.is_subset(&parsed_feats))
-                            .map(|i| i.id.clone())
-                            .collect(),
-                    },
+                let cell = build_intersection_cell(
+                    span.features.clone(),
+                    format!("Fused multi-feature code block (`{}`)", span.symbol),
+                    &features,
+                    &exceptions,
+                    &incidents,
                 );
+                cells.insert(cell.coordinate.clone(), cell);
             }
         }
 
@@ -119,7 +143,7 @@ impl GvcsWorkspace {
         })
     }
 
-    /// Computes a deterministic Merkle state hash over the entire hypergraph and code spans.
+    /// Computes a deterministic SHA-256 state hash over the entire Feature Map and code blocks.
     pub fn compute_graph_state_hash(&self) -> String {
         let mut material = String::new();
         for (id, f) in &self.features {
@@ -157,7 +181,7 @@ impl GvcsWorkspace {
         Ok(lock)
     }
 
-    /// Checks for AST hash drift between `src/` and `provenance.lock`.
+    /// Checks for SHA-256 hash drift between `src/` and `provenance.lock`.
     pub fn check_drifts(&self) -> Vec<SpanDrift> {
         match &self.existing_lock {
             Some(lock) => verify_provenance_drift(lock, &self.current_spans),
@@ -166,8 +190,7 @@ impl GvcsWorkspace {
     }
 
     /// Slices the codebase by a Feature ID (`gvcs slice <feature>`), returning all
-    /// Intersection Cells ($I_S$ where $F \in S$) and exact code spans in `src/`
-    /// that exist because of that feature.
+    /// Feature Overlaps (`I(A ∩ B)`) and exact code blocks in `src/` that implement that feature.
     pub fn slice_feature(
         &self,
         feature_query: &str,
@@ -183,14 +206,13 @@ impl GvcsWorkspace {
             .cloned()
             .collect();
 
-        let matched_coords: Vec<String> =
-            matched_cells.iter().map(|c| c.coordinate.clone()).collect();
-
         let matched_spans: Vec<CodeProvenanceSpan> = self
             .current_spans
             .iter()
             .filter(|s| {
-                matched_coords.contains(&s.cell_coordinate)
+                s.features
+                    .iter()
+                    .any(|f| f == feature_query || f.contains(feature_query))
                     || s.cell_coordinate.contains(feature_query)
             })
             .cloned()

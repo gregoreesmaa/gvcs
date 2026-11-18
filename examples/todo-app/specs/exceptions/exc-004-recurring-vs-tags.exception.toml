@@ -1,11 +1,4 @@
 id = "EXC-004-recurring-vs-tags"
-features = ["feat:recurring-tasks", "feat:tags-and-search"]
-conflict_summary = "Both 'Recurring tasks automatically spawn the next occurrence upon completion' and 'Users can organize tasks with project tags, search keywords, and filter views' mutate shared substrate [\"DBTable:todos\", \"Viewport:TodoList\"]."
-chosen_option = "OPT-INHERIT-TAGS-ON-SPAWN"
-resolution_directive = "When a recurring task is completed and spawns its next cycle occurrence, automatically carry forward all #tags from the completed parent task."
-
-[[options]]
-option_id = "OPT-INHERIT-TAGS-ON-SPAWN"
-label = "Carry Forward #Tags to Spawned Recurring Occurrences (Recommended)"
-business_impact = "Recurring tasks keep their project tags (#ops, #weekly) across every future cycle."
-estimated_cost_or_latency = "0ms overhead"
+between = ["recurring-tasks", "tags-and-search"]
+question = "When a recurring task completes and spawns next week's task, what happens to its #tags?"
+decision = "Automatically carry forward all #tags from the completed task to the newly spawned task."

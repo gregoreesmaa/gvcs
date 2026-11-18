@@ -1,8 +1,3 @@
-@id: feat:todo-crud
-@stratum: L0
-@tag: pii, user_data, mutable_state, persistent_storage, read_query
-@substrate: DBTable:todos, Viewport:TodoList
-
 Feature: Users can create, list, and complete todo tasks
   As a busy user
   I want to manage my personal todo items
@@ -11,7 +6,7 @@ Feature: Users can create, list, and complete todo tasks
   Scenario: User creates a new todo task
     Given the Todo workspace is initialized
     When the user creates a todo task titled "Ship gvcs architecture"
-    Then the task is stored in "DBTable:todos" with status Pending
+    Then the task is saved in their todo list with status Pending
 
   Scenario: User completes an existing todo task
     Given an existing pending task #1

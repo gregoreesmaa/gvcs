@@ -1,8 +1,4 @@
-@id: feat:recurring-tasks
-@stratum: L0
-@tag: mutable_state, persistent_storage
-@substrate: DBTable:todos, Viewport:TodoList
-@lifecycle: CANARY(25%, flag_recurring_tasks)
+Rollout: Canary 25% (flag_recurring_tasks)
 
 Feature: Recurring tasks automatically spawn the next occurrence upon completion
   As a power user with repeating habits
@@ -14,4 +10,4 @@ Feature: Recurring tasks automatically spawn the next occurrence upon completion
     When the user marks the task as completed
     Then the current task is marked Completed
     And a new Pending task is automatically spawned for the next cycle
-    Invariant: Completing an already-completed recurring task must NEVER spawn duplicate occurrences (see INC-001)
+    Invariant: Completing an already-completed recurring task must NEVER spawn duplicate occurrences
