@@ -1,0 +1,12 @@
+@id: cap:web-ui
+@stratum: L2
+@tag: user_facing
+@substrate: Viewport:TodoList
+
+Capability: Interactive Single-Page Web UI & REST API Server
+  Quantifier: For ANY user-facing feature on Viewport:TodoList, project an interactive Web UI dashboard with live tag pills, urgency heat badges, and a confirmation modal for destructive actions (GDPR Export & Erase).
+
+  Scenario: User manages tasks through the browser Web UI
+    Given the Todo Web UI server is running on localhost
+    When the user opens Viewport:TodoList in a browser
+    Then they can add tasks with #tags and recurrence, filter by tag or search query, toggle completion, and trigger 1-click GDPR JSON export & erasure

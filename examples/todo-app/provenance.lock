@@ -1,39 +1,7 @@
 {
   "version": "1.0.0",
-  "graph_state_hash": "c794ca37cd23adec2a8bd22dac62462b1c529af7702d1fb56a24c29d70580650",
+  "graph_state_hash": "1e0aa68c517a6a5a0122716088efe9a08548c7ad77d3fb2e091206ef48a0c3f4",
   "features": {
-    "cap:cli-ux-shell": {
-      "id": "cap:cli-ux-shell",
-      "title": "Minimalist Terminal & Mobile Summary Projection",
-      "spec_path": "specs/capabilities/cli-ux-shell.cap",
-      "kind": "capability",
-      "stratum": "L2Projection",
-      "lifecycle": {
-        "state": "GA"
-      },
-      "ontology_tags": [
-        "user_facing"
-      ],
-      "substrates": [
-        "Viewport:TodoList"
-      ],
-      "quantifiers": [
-        {
-          "statement": "For ANY user-facing feature on Viewport:TodoList, render high-priority badges first and tuck destructive actions (GDPR erase) behind an explicit confirmation guard.",
-          "matches_any_tag": [
-            "user_facing"
-          ],
-          "matches_any_substrate": [
-            "Viewport:TodoList"
-          ],
-          "emits_obligation": "enforce_viewport_ux_choreography"
-        }
-      ],
-      "scenarios": [
-        "Priority-ordered task board rendering"
-      ],
-      "spec_digest": "41427f30e0734073b85b9440c61788ab14d7158d9eb51f01197bd07613cf3d06"
-    },
     "cap:fast-cache-sla": {
       "id": "cap:fast-cache-sla",
       "title": "Sub-25ms Read Latency SLA via Write-Through Memory Cache",
@@ -103,6 +71,38 @@
         "1-Click Right to Be Forgotten"
       ],
       "spec_digest": "35fb8b166cab846244d915d3de720727d218e19ae5fc9a5c9c71fb09c4ebe9c2"
+    },
+    "cap:web-ui": {
+      "id": "cap:web-ui",
+      "title": "Interactive Single-Page Web UI & REST API Server",
+      "spec_path": "specs/capabilities/web-ui.cap",
+      "kind": "capability",
+      "stratum": "L2Projection",
+      "lifecycle": {
+        "state": "GA"
+      },
+      "ontology_tags": [
+        "user_facing"
+      ],
+      "substrates": [
+        "Viewport:TodoList"
+      ],
+      "quantifiers": [
+        {
+          "statement": "For ANY user-facing feature on Viewport:TodoList, project an interactive Web UI dashboard with live tag pills, urgency heat badges, and a confirmation modal for destructive actions (GDPR Export & Erase).",
+          "matches_any_tag": [
+            "user_facing"
+          ],
+          "matches_any_substrate": [
+            "Viewport:TodoList"
+          ],
+          "emits_obligation": "enforce_viewport_ux_choreography"
+        }
+      ],
+      "scenarios": [
+        "User manages tasks through the browser Web UI"
+      ],
+      "spec_digest": "0ad2e7e230611683c0b68aca5f688b84577f4c519b2765c90fc1eb8735112499"
     },
     "feat:recurring-tasks": {
       "id": "feat:recurring-tasks",
@@ -176,48 +176,10 @@
       ],
       "quantifiers": [],
       "scenarios": [
-        "User creates a new todo task with an owner email",
+        "User creates a new todo task",
         "User completes an existing todo task"
       ],
-      "spec_digest": "494f49ab6ba6d1c415199b9997112c79d75c565a8f810f96a18b5a089bd48f6a"
-    },
-    "mkt:google-login": {
-      "id": "mkt:google-login",
-      "title": "Sign in with Google (Marketplace Blueprint)",
-      "spec_path": "specs/capabilities/google-login.cap",
-      "kind": {
-        "marketplace_blueprint": {
-          "package": "",
-          "version": "marketplace/google-oauth-identity@2.4.0"
-        }
-      },
-      "stratum": "L1Policy",
-      "lifecycle": {
-        "state": "GA"
-      },
-      "ontology_tags": [
-        "pii",
-        "user_data"
-      ],
-      "substrates": [
-        "Viewport:TodoList"
-      ],
-      "quantifiers": [
-        {
-          "statement": "For ANY feature that stores or mutates user_data, bind the operation to a verified Google OAuth identity token.",
-          "matches_any_tag": [
-            "mutable_state",
-            "pii",
-            "user_data"
-          ],
-          "matches_any_substrate": [],
-          "emits_obligation": "enforce_google_oauth_identity_guard"
-        }
-      ],
-      "scenarios": [
-        "Reject unauthenticated task mutations"
-      ],
-      "spec_digest": "04f1cf3682e56b3db485a3e0accd3c19a7fa8c9f24dcd32eb5393a93d3c03b4f"
+      "spec_digest": "b7adb8f7998751079fa270daa2faab782970d71a8dc341ebfb37a2f246bc7485"
     },
     "native:priority-decay": {
       "id": "native:priority-decay",
@@ -248,98 +210,6 @@
     }
   },
   "cells": {
-    "I(cap:cli-ux-shell ∩ feat:recurring-tasks)": {
-      "coordinate": "I(cap:cli-ux-shell ∩ feat:recurring-tasks)",
-      "features": [
-        "cap:cli-ux-shell",
-        "feat:recurring-tasks"
-      ],
-      "derivation_reason": "Quantifier in 'cap:cli-ux-shell' matched 'feat:recurring-tasks' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
-      "shared_substrates": [
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
-      "incident_guards": []
-    },
-    "I(cap:cli-ux-shell ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)": {
-      "coordinate": "I(cap:cli-ux-shell ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
-      "features": [
-        "cap:cli-ux-shell",
-        "feat:tags-and-search",
-        "feat:todo-crud",
-        "native:priority-decay"
-      ],
-      "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::render_viewport_board`)",
-      "shared_substrates": [],
-      "applied_pins": [
-        "EXC-003-crud-vs-tags"
-      ],
-      "incident_guards": []
-    },
-    "I(cap:cli-ux-shell ∩ feat:tags-and-search)": {
-      "coordinate": "I(cap:cli-ux-shell ∩ feat:tags-and-search)",
-      "features": [
-        "cap:cli-ux-shell",
-        "feat:tags-and-search"
-      ],
-      "derivation_reason": "Quantifier in 'cap:cli-ux-shell' matched 'feat:tags-and-search' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
-      "shared_substrates": [
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
-      "incident_guards": []
-    },
-    "I(cap:cli-ux-shell ∩ feat:todo-crud)": {
-      "coordinate": "I(cap:cli-ux-shell ∩ feat:todo-crud)",
-      "features": [
-        "cap:cli-ux-shell",
-        "feat:todo-crud"
-      ],
-      "derivation_reason": "Quantifier in 'cap:cli-ux-shell' matched 'feat:todo-crud' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
-      "shared_substrates": [
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
-      "incident_guards": []
-    },
-    "I(cap:cli-ux-shell ∩ mkt:google-login)": {
-      "coordinate": "I(cap:cli-ux-shell ∩ mkt:google-login)",
-      "features": [
-        "cap:cli-ux-shell",
-        "mkt:google-login"
-      ],
-      "derivation_reason": "Quantifier in 'cap:cli-ux-shell' matched 'mkt:google-login' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
-      "shared_substrates": [
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
-      "incident_guards": []
-    },
-    "I(cap:cli-ux-shell ∩ native:priority-decay)": {
-      "coordinate": "I(cap:cli-ux-shell ∩ native:priority-decay)",
-      "features": [
-        "cap:cli-ux-shell",
-        "native:priority-decay"
-      ],
-      "derivation_reason": "Quantifier in 'cap:cli-ux-shell' matched 'native:priority-decay' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
-      "shared_substrates": [
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
-      "incident_guards": []
-    },
-    "I(cap:cli-ux-shell)": {
-      "coordinate": "I(cap:cli-ux-shell)",
-      "features": [
-        "cap:cli-ux-shell"
-      ],
-      "derivation_reason": "Basis self-slice [L2 (UX & Platform Projection)]",
-      "shared_substrates": [
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
-      "incident_guards": []
-    },
     "I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)": {
       "coordinate": "I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)",
       "features": [
@@ -513,6 +383,85 @@
       "applied_pins": [],
       "incident_guards": []
     },
+    "I(cap:web-ui ∩ feat:recurring-tasks)": {
+      "coordinate": "I(cap:web-ui ∩ feat:recurring-tasks)",
+      "features": [
+        "cap:web-ui",
+        "feat:recurring-tasks"
+      ],
+      "derivation_reason": "Quantifier in 'cap:web-ui' matched 'feat:recurring-tasks' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:web-ui ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)": {
+      "coordinate": "I(cap:web-ui ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
+      "features": [
+        "cap:web-ui",
+        "feat:tags-and-search",
+        "feat:todo-crud",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Joint Multi-Cell Fused implementation span (`web_ui::handle_http_request`)",
+      "shared_substrates": [],
+      "applied_pins": [
+        "EXC-003-crud-vs-tags"
+      ],
+      "incident_guards": []
+    },
+    "I(cap:web-ui ∩ feat:tags-and-search)": {
+      "coordinate": "I(cap:web-ui ∩ feat:tags-and-search)",
+      "features": [
+        "cap:web-ui",
+        "feat:tags-and-search"
+      ],
+      "derivation_reason": "Quantifier in 'cap:web-ui' matched 'feat:tags-and-search' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:web-ui ∩ feat:todo-crud)": {
+      "coordinate": "I(cap:web-ui ∩ feat:todo-crud)",
+      "features": [
+        "cap:web-ui",
+        "feat:todo-crud"
+      ],
+      "derivation_reason": "Quantifier in 'cap:web-ui' matched 'feat:todo-crud' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:web-ui ∩ native:priority-decay)": {
+      "coordinate": "I(cap:web-ui ∩ native:priority-decay)",
+      "features": [
+        "cap:web-ui",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Quantifier in 'cap:web-ui' matched 'native:priority-decay' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:web-ui)": {
+      "coordinate": "I(cap:web-ui)",
+      "features": [
+        "cap:web-ui"
+      ],
+      "derivation_reason": "Basis self-slice [L2 (UX & Platform Projection)]",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
     "I(feat:recurring-tasks ∩ feat:tags-and-search ∩ feat:todo-crud)": {
       "coordinate": "I(feat:recurring-tasks ∩ feat:tags-and-search ∩ feat:todo-crud)",
       "features": [
@@ -565,19 +514,6 @@
         "INC-001-double-complete-spawn"
       ]
     },
-    "I(feat:recurring-tasks ∩ mkt:google-login)": {
-      "coordinate": "I(feat:recurring-tasks ∩ mkt:google-login)",
-      "features": [
-        "feat:recurring-tasks",
-        "mkt:google-login"
-      ],
-      "derivation_reason": "Quantifier in 'mkt:google-login' matched 'feat:recurring-tasks' on tags [\"mutable_state\"] -> obligation 'enforce_google_oauth_identity_guard'",
-      "shared_substrates": [
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
-      "incident_guards": []
-    },
     "I(feat:recurring-tasks ∩ native:priority-decay)": {
       "coordinate": "I(feat:recurring-tasks ∩ native:priority-decay)",
       "features": [
@@ -605,20 +541,6 @@
       "applied_pins": [],
       "incident_guards": []
     },
-    "I(feat:tags-and-search ∩ feat:todo-crud ∩ mkt:google-login)": {
-      "coordinate": "I(feat:tags-and-search ∩ feat:todo-crud ∩ mkt:google-login)",
-      "features": [
-        "feat:tags-and-search",
-        "feat:todo-crud",
-        "mkt:google-login"
-      ],
-      "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::create_todo`)",
-      "shared_substrates": [],
-      "applied_pins": [
-        "EXC-003-crud-vs-tags"
-      ],
-      "incident_guards": []
-    },
     "I(feat:tags-and-search ∩ feat:todo-crud)": {
       "coordinate": "I(feat:tags-and-search ∩ feat:todo-crud)",
       "features": [
@@ -633,19 +555,6 @@
       "applied_pins": [
         "EXC-003-crud-vs-tags"
       ],
-      "incident_guards": []
-    },
-    "I(feat:tags-and-search ∩ mkt:google-login)": {
-      "coordinate": "I(feat:tags-and-search ∩ mkt:google-login)",
-      "features": [
-        "feat:tags-and-search",
-        "mkt:google-login"
-      ],
-      "derivation_reason": "Quantifier in 'mkt:google-login' matched 'feat:tags-and-search' on tags [\"mutable_state\"] -> obligation 'enforce_google_oauth_identity_guard'",
-      "shared_substrates": [
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
       "incident_guards": []
     },
     "I(feat:tags-and-search ∩ native:priority-decay)": {
@@ -675,19 +584,6 @@
       "applied_pins": [],
       "incident_guards": []
     },
-    "I(feat:todo-crud ∩ mkt:google-login)": {
-      "coordinate": "I(feat:todo-crud ∩ mkt:google-login)",
-      "features": [
-        "feat:todo-crud",
-        "mkt:google-login"
-      ],
-      "derivation_reason": "Quantifier in 'mkt:google-login' matched 'feat:todo-crud' on tags [\"mutable_state\", \"pii\", \"user_data\"] -> obligation 'enforce_google_oauth_identity_guard'",
-      "shared_substrates": [
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
-      "incident_guards": []
-    },
     "I(feat:todo-crud ∩ native:priority-decay)": {
       "coordinate": "I(feat:todo-crud ∩ native:priority-decay)",
       "features": [
@@ -710,31 +606,6 @@
       "derivation_reason": "Basis self-slice [L0 (Domain Behavior)]",
       "shared_substrates": [
         "DBTable:todos",
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
-      "incident_guards": []
-    },
-    "I(mkt:google-login ∩ native:priority-decay)": {
-      "coordinate": "I(mkt:google-login ∩ native:priority-decay)",
-      "features": [
-        "mkt:google-login",
-        "native:priority-decay"
-      ],
-      "derivation_reason": "Shared physical substrate coupling: {\"Viewport:TodoList\"}",
-      "shared_substrates": [
-        "Viewport:TodoList"
-      ],
-      "applied_pins": [],
-      "incident_guards": []
-    },
-    "I(mkt:google-login)": {
-      "coordinate": "I(mkt:google-login)",
-      "features": [
-        "mkt:google-login"
-      ],
-      "derivation_reason": "Basis self-slice [L1 (Policy & Compliance)]",
-      "shared_substrates": [
         "Viewport:TodoList"
       ],
       "applied_pins": [],
@@ -853,22 +724,11 @@
   "code_spans": [
     {
       "file_path": "src/lib.rs",
-      "symbol": "AuthSession",
-      "cell_coordinate": "I(mkt:google-login)",
-      "start_line": 17,
-      "end_line": 43,
-      "content_sha256": "89339da82c680eae81e179130723ddc89a9c4206ae526c4bf63a39f20182d625",
-      "verification_tests": [
-        "test_google_oauth_rejects_unauthenticated_mutations"
-      ]
-    },
-    {
-      "file_path": "src/lib.rs",
       "symbol": "TodoItem",
       "cell_coordinate": "I(feat:tags-and-search ∩ feat:todo-crud)",
-      "start_line": 45,
-      "end_line": 97,
-      "content_sha256": "80569c9c8bb07e71d158adfea4d3000646dd773d061a1ca79d0f88e0140122ed",
+      "start_line": 18,
+      "end_line": 71,
+      "content_sha256": "cab6c59eed7c58ef498a9cedd22d9839e7a7969cbf97af369826da47e8589cc9",
       "verification_tests": [
         "test_create_and_complete_todo",
         "test_tags_extraction_and_search_filter"
@@ -877,13 +737,12 @@
     {
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::create_todo",
-      "cell_coordinate": "I(feat:tags-and-search ∩ feat:todo-crud ∩ mkt:google-login)",
-      "start_line": 99,
-      "end_line": 225,
-      "content_sha256": "2e2950f5cf736e404348d4943aa9609fa885d5e0b5a5d072c04c1a799e440e61",
+      "cell_coordinate": "I(feat:tags-and-search ∩ feat:todo-crud)",
+      "start_line": 73,
+      "end_line": 219,
+      "content_sha256": "d8ff83e45f238d2f8b4bfbd0c95ff39299b9cf4132dd7da36da44729130b6b1a",
       "verification_tests": [
         "test_create_and_complete_todo",
-        "test_google_oauth_rejects_unauthenticated_mutations",
         "test_persistent_disk_roundtrip"
       ]
     },
@@ -891,9 +750,9 @@
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::complete_todo",
       "cell_coordinate": "I(feat:recurring-tasks ∩ feat:tags-and-search ∩ feat:todo-crud)",
-      "start_line": 227,
-      "end_line": 290,
-      "content_sha256": "edf714a87d360e94edb29d304e2d7161d1c6e61031d84d3b943b98b4a3a9f704",
+      "start_line": 221,
+      "end_line": 282,
+      "content_sha256": "1d2c0c0472cb9bdf36e9dac7bbac6c7a38ac3f145178d3dfc0ad8f13850e0fe5",
       "verification_tests": [
         "test_recurring_task_spawns_next_cycle",
         "test_inc_001_idempotent_complete_never_spawns_duplicate_recurrence"
@@ -903,9 +762,9 @@
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::list_todos_sorted",
       "cell_coordinate": "I(cap:fast-cache-sla ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
-      "start_line": 292,
-      "end_line": 364,
-      "content_sha256": "a4f342b7461f4e1d373e2c185f4ec935dbd4580d5c2f4ae479e202a9463727f9",
+      "start_line": 284,
+      "end_line": 350,
+      "content_sha256": "0c7e935ddffa76224510fbe61ecf4ce70166c373f4dee52e09b48e53f0b6dbd2",
       "verification_tests": [
         "test_cached_list_sorted_by_native_urgency",
         "test_tags_extraction_and_search_filter"
@@ -915,22 +774,11 @@
       "file_path": "src/lib.rs",
       "symbol": "TodoStore::gdpr_erase_and_export",
       "cell_coordinate": "I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)",
-      "start_line": 366,
-      "end_line": 396,
-      "content_sha256": "0278bacfe1b5120ac240e67c16bf350ff469ed6de6c98af8e7d84bf030d97ec5",
+      "start_line": 352,
+      "end_line": 371,
+      "content_sha256": "c0aa4700eaf72d059532eaf7b374e8cfc1bba78b16f3b97361fdee2895e473bb",
       "verification_tests": [
         "test_gdpr_erasure_wipes_storage_and_cache_synchronously"
-      ]
-    },
-    {
-      "file_path": "src/lib.rs",
-      "symbol": "TodoStore::render_viewport_board",
-      "cell_coordinate": "I(cap:cli-ux-shell ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
-      "start_line": 398,
-      "end_line": 493,
-      "content_sha256": "0fa1279591ad905d9c4c7304b85d7a4c7aaa0aebb2dd5c29fa5add66595c8d3c",
-      "verification_tests": [
-        "test_render_viewport_board_formats_badges"
       ]
     },
     {
@@ -942,6 +790,17 @@
       "content_sha256": "95c56f519978c9420883191df8ea67229245c99ea560bf1b5cdbf511dc8375a4",
       "verification_tests": [
         "test_native_urgency_monotonicity"
+      ]
+    },
+    {
+      "file_path": "src/web_ui.rs",
+      "symbol": "web_ui::handle_http_request",
+      "cell_coordinate": "I(cap:web-ui ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)",
+      "start_line": 12,
+      "end_line": 406,
+      "content_sha256": "190a006f2c912b26c801abbee7519207665d4775298e59ce3b408cec093c0be6",
+      "verification_tests": [
+        "test_web_ui_rest_api_and_dashboard_html"
       ]
     }
   ]

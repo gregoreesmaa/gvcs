@@ -47,9 +47,8 @@ gvcs/
         │   │   ├── 003-priority-scoring.feature   # L0 Domain: @native Rust urgency decay kernel
         │   │   └── 004-tags-and-search.feature    # L0 Domain: Inline #tags, search & filtered views
         │   ├── capabilities/
-        │   │   ├── google-login.cap               # L1 Policy: @marketplace/google-oauth-identity@2.4.0
         │   │   ├── gdpr-privacy.cap               # L1 Policy: @marketplace/eu-gdpr-privacy-safe@3.1.0
-        │   │   ├── cli-ux-shell.cap               # L2 Projection: Viewport:TodoList badge & overflow rules
+        │   │   ├── web-ui.cap                     # L2 Projection: Interactive Single-Page Web UI & REST API
         │   │   └── fast-cache-sla.cap             # L3 Envelope: Sub-25ms write-through memory cache
         │   ├── exceptions/
         │   │   ├── pareto-001-cache-vs-gdpr.pareto.toml     # Resolves L3 Cache vs L1 GDPR 0ms erasure conflict
@@ -61,7 +60,8 @@ gvcs/
         ├── src/
         │   ├── lib.rs                             # Fused Rust implementation with @gvcs-begin/end cell spans
         │   ├── native_priority.rs                 # Sealed @native urgency scoring kernel
-        │   └── main.rs                            # Interactive CLI Todo App (add, list, done, delete, gdpr-erase, demo)
+        │   ├── web_ui.rs                          # Interactive Single-Page Web UI & REST API Projection
+        │   └── main.rs                            # Web UI Server (`serve`) & Showcase (`demo`)
         └── provenance.lock                        # Cryptographic Merkle lock mapping I(A ∩ B) <-> src/ spans
 ```
 
@@ -69,19 +69,15 @@ gvcs/
 
 ## 4. Quickstart: Build & Run in Under 5 Minutes
 
-### 1. Run the Interactive Todo App CLI (`todo-app`)
-The reference Todo application is a real, persistent CLI app (`add`, `list`, `done`, `delete`, `gdpr-erase`, `demo`) backed by a disk JSON database (`.todo-db.json`) and in-memory write-through read cache:
+### 1. Launch the Interactive Web UI Server (`todo-app serve`)
+The reference Todo application projects `Viewport:TodoList` into a Single-Page Web Application + JSON REST API (`GET /`, `GET /api/todos`, `POST /api/todos`, `POST /api/todos/:id/complete`, `DELETE /api/todos/:id`, `POST /api/gdpr-erase`):
 
 ```bash
-# Run the full 4-step showcase across all 8 intersecting features:
+# Run the self-contained REST & Web UI showcase in <1s:
 cargo run -p todo-app -- demo
 
-# Or use the persistent CLI directly:
-cargo run -p todo-app -- add "Ship gvcs 1.0 #rust #release" --priority 5 --overdue-hours 2 --recur-days 7
-cargo run -p todo-app -- add "Buy espresso beans #home" --priority 2 --overdue-hours -12
-cargo run -p todo-app -- list --tag rust
-cargo run -p todo-app -- done 1
-cargo run -p todo-app -- gdpr-erase --confirm
+# Or launch the live Web UI server and open http://127.0.0.1:8080 in your browser:
+cargo run -p todo-app -- serve --addr 127.0.0.1:8080
 ```
 
 ### 2. Run the Complete Test & Invariant Suite
@@ -93,7 +89,7 @@ cargo test --workspace
 ```bash
 cargo run -p gvcs-cli -- status
 ```
-Displays all 8 stratified Feature Vectors ($L_0 \to L_3$), their lifecycle gates (`GA`, `CANARY(25%)`), all 37 resolved Intersection Cells ($I_{A \cap B}$), and the 4 Pareto/Exception Pins ($\mathcal{E}$).
+Displays all 7 stratified Feature Vectors ($L_0 \to L_3$), their lifecycle gates (`GA`, `CANARY(25%)`), all 30 resolved Intersection Cells ($I_{A \cap B}$), and the 4 Pareto/Exception Pins ($\mathcal{E}$).
 
 ### 4. Verify Adherence, Pareto Pins & 3 AM Hotfix Drift (`gvcs check`)
 ```bash
@@ -104,11 +100,11 @@ Verifies that:
 2. Every `@gvcs-begin` code span in `src/` matches its locked SHA-256 digest in `provenance.lock` (or carries an active 72-hour `.incident` Tourniquet Pin).
 3. All historical `.incident` records have been lifted into permanent Negative Invariant tests.
 
-### 5. Slice the Codebase by Any Feature or Horizontal Policy (`gvcs slice`)
+### 5. Slice the Codebase by Any Feature or Projection (`gvcs slice`)
 ```bash
-cargo run -p gvcs-cli -- slice gdpr-privacy
+cargo run -p gvcs-cli -- slice web-ui
 ```
-Instantly locates every Intersection Cell (`I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)`) and the exact lines of Rust code in `src/lib.rs` and verification tests that exist because of `gdpr-privacy`.
+Instantly locates every Intersection Cell (`I(cap:web-ui ∩ feat:tags-and-search ∩ feat:todo-crud ∩ native:priority-decay)`) and the exact lines of Rust code in `src/web_ui.rs` and verification tests that exist because of `web-ui`.
 
 ### 6. Simulate Feature Removal / Deprecation Blast Radius (`gvcs what-if`)
 ```bash
