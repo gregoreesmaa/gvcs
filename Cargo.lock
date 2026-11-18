@@ -273,6 +273,7 @@ dependencies = [
  "clap",
  "colored",
  "gvcs-core",
+ "serde",
  "serde_json",
  "toml",
 ]
