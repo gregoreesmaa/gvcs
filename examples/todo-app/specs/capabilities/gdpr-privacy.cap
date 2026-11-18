@@ -1,0 +1,14 @@
+@id: cap:gdpr-privacy
+@stratum: L1
+@uses: @marketplace/eu-gdpr-privacy-safe@3.1.0
+@tag: pii, user_data
+@substrate: DBTable:todos
+
+Capability: EU Privacy Safe (GDPR Right to Erasure & Portability)
+  Quantifier: For ANY feature that stores Customer PII or user_data, provide 1-click full erasure and JSON export with zero stale reads.
+
+  Scenario: 1-Click Right to Be Forgotten
+    Given a user "alice@example.com" with active and recurring todo tasks
+    When they trigger a GDPR account erasure request
+    Then all tasks owned by "alice@example.com" in "DBTable:todos" are permanently wiped
+    And any cached read projections for "alice@example.com" are immediately invalidated (0ms stale PII)

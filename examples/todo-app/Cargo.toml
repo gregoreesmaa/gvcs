@@ -1,0 +1,17 @@
+[package]
+name = "todo-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Reference Todo Application built with Specification-as-Source & gvcs Intersection Cells"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+sha2.workspace = true
+hex.workspace = true
+
+[dev-dependencies]
+gvcs-core = { path = "../../crates/gvcs-core" }

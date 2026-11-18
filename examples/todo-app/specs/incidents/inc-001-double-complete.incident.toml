@@ -1,0 +1,9 @@
+id = "INC-001-double-complete-spawn"
+title = "Double-clicking Complete on a recurring task spawned two duplicate future tasks"
+affected_features = ["feat:recurring-tasks", "feat:todo-crud"]
+what_happened = "At 03:12 UTC, a mobile client sent two concurrent complete_todo(#42) requests during a network retry. Both saw recurrence_days=7 and spawned two duplicate future tasks."
+
+[stage]
+stage = "lifted_invariant"
+negative_invariant = "Completing an already-Completed task must be an idempotent no-op and must NEVER spawn a second recurring task instance."
+regression_test_name = "test_inc_001_idempotent_complete_never_spawns_duplicate_recurrence"

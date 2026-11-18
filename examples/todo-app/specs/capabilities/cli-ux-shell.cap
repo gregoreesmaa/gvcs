@@ -1,0 +1,12 @@
+@id: cap:cli-ux-shell
+@stratum: L2
+@tag: user_facing
+@substrate: Viewport:TodoList
+
+Capability: Minimalist Terminal & Mobile Summary Projection
+  Quantifier: For ANY user-facing feature on Viewport:TodoList, render high-priority badges first and tuck destructive actions (GDPR erase) behind an explicit confirmation guard.
+
+  Scenario: Priority-ordered task board rendering
+    Given multiple pending and completed tasks on Viewport:TodoList
+    When the board is rendered
+    Then tasks are displayed ordered by Urgency Score with clear recurrence and priority badges

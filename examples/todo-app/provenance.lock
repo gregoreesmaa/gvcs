@@ -1,0 +1,736 @@
+{
+  "version": "1.0.0",
+  "graph_state_hash": "256689a033999e9e6bf0d8a0240d8fe52aae5b125e35f95aac3e22cf6721d2ea",
+  "features": {
+    "cap:cli-ux-shell": {
+      "id": "cap:cli-ux-shell",
+      "title": "Minimalist Terminal & Mobile Summary Projection",
+      "spec_path": "specs/capabilities/cli-ux-shell.cap",
+      "kind": "capability",
+      "stratum": "L2Projection",
+      "lifecycle": {
+        "state": "GA"
+      },
+      "ontology_tags": [
+        "user_facing"
+      ],
+      "substrates": [
+        "Viewport:TodoList"
+      ],
+      "quantifiers": [
+        {
+          "statement": "For ANY user-facing feature on Viewport:TodoList, render high-priority badges first and tuck destructive actions (GDPR erase) behind an explicit confirmation guard.",
+          "matches_any_tag": [
+            "user_facing"
+          ],
+          "matches_any_substrate": [
+            "Viewport:TodoList"
+          ],
+          "emits_obligation": "enforce_viewport_ux_choreography"
+        }
+      ],
+      "scenarios": [
+        "Priority-ordered task board rendering"
+      ],
+      "spec_digest": "41427f30e0734073b85b9440c61788ab14d7158d9eb51f01197bd07613cf3d06"
+    },
+    "cap:fast-cache-sla": {
+      "id": "cap:fast-cache-sla",
+      "title": "Sub-25ms Read Latency SLA via Write-Through Memory Cache",
+      "spec_path": "specs/capabilities/fast-cache-sla.cap",
+      "kind": "capability",
+      "stratum": "L3Envelope",
+      "lifecycle": {
+        "state": "GA"
+      },
+      "ontology_tags": [
+        "read_query"
+      ],
+      "substrates": [
+        "Budget:Latency25ms",
+        "DBTable:todos"
+      ],
+      "quantifiers": [
+        {
+          "statement": "For ANY feature that performs a read_query on DBTable:todos, serve results from an in-memory read cache under 25ms p99.",
+          "matches_any_tag": [
+            "read_query"
+          ],
+          "matches_any_substrate": [
+            "DBTable:todos"
+          ],
+          "emits_obligation": "enforce_sub25ms_read_cache"
+        }
+      ],
+      "scenarios": [
+        "Cached task list retrieval"
+      ],
+      "spec_digest": "6327d5c958fdc94a514b62ae5d2447fb737534044975ee18bb40523c9a2dae71"
+    },
+    "cap:gdpr-privacy": {
+      "id": "cap:gdpr-privacy",
+      "title": "EU Privacy Safe (GDPR Right to Erasure & Portability)",
+      "spec_path": "specs/capabilities/gdpr-privacy.cap",
+      "kind": {
+        "marketplace_blueprint": {
+          "package": "",
+          "version": "marketplace/eu-gdpr-privacy-safe@3.1.0"
+        }
+      },
+      "stratum": "L1Policy",
+      "lifecycle": {
+        "state": "GA"
+      },
+      "ontology_tags": [
+        "pii",
+        "user_data"
+      ],
+      "substrates": [
+        "DBTable:todos"
+      ],
+      "quantifiers": [
+        {
+          "statement": "For ANY feature that stores Customer PII or user_data, provide 1-click full erasure and JSON export with zero stale reads.",
+          "matches_any_tag": [
+            "pii",
+            "user_data"
+          ],
+          "matches_any_substrate": [],
+          "emits_obligation": "enforce_gdpr_erasure_and_export"
+        }
+      ],
+      "scenarios": [
+        "1-Click Right to Be Forgotten"
+      ],
+      "spec_digest": "35fb8b166cab846244d915d3de720727d218e19ae5fc9a5c9c71fb09c4ebe9c2"
+    },
+    "feat:recurring-tasks": {
+      "id": "feat:recurring-tasks",
+      "title": "Recurring tasks automatically spawn the next occurrence upon completion",
+      "spec_path": "specs/features/002-recurring-tasks.feature",
+      "kind": "feature",
+      "stratum": "L0Domain",
+      "lifecycle": {
+        "state": "CANARY",
+        "percentage": 25,
+        "flag": "flag_recurring_tasks"
+      },
+      "ontology_tags": [
+        "mutable_state",
+        "persistent_storage"
+      ],
+      "substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "quantifiers": [],
+      "scenarios": [
+        "Completing a recurring task spawns the next cycle",
+        "Completing an already-completed recurring task must NEVER spawn duplicate occurrences (see INC-001)"
+      ],
+      "spec_digest": "6bfce43e89fe7ed86fcda1cb01817e8cf84317eccc18469ab6d26a8fd23b15ae"
+    },
+    "feat:todo-crud": {
+      "id": "feat:todo-crud",
+      "title": "Users can create, list, and complete todo tasks",
+      "spec_path": "specs/features/001-todo-crud.feature",
+      "kind": "feature",
+      "stratum": "L0Domain",
+      "lifecycle": {
+        "state": "GA"
+      },
+      "ontology_tags": [
+        "mutable_state",
+        "persistent_storage",
+        "pii",
+        "read_query",
+        "user_data"
+      ],
+      "substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "quantifiers": [],
+      "scenarios": [
+        "User creates a new todo task with an owner email",
+        "User completes an existing todo task"
+      ],
+      "spec_digest": "494f49ab6ba6d1c415199b9997112c79d75c565a8f810f96a18b5a089bd48f6a"
+    },
+    "mkt:google-login": {
+      "id": "mkt:google-login",
+      "title": "Sign in with Google (Marketplace Blueprint)",
+      "spec_path": "specs/capabilities/google-login.cap",
+      "kind": {
+        "marketplace_blueprint": {
+          "package": "",
+          "version": "marketplace/google-oauth-identity@2.4.0"
+        }
+      },
+      "stratum": "L1Policy",
+      "lifecycle": {
+        "state": "GA"
+      },
+      "ontology_tags": [
+        "pii",
+        "user_data"
+      ],
+      "substrates": [
+        "Viewport:TodoList"
+      ],
+      "quantifiers": [
+        {
+          "statement": "For ANY feature that stores or mutates user_data, bind the operation to a verified Google OAuth identity token.",
+          "matches_any_tag": [
+            "mutable_state",
+            "pii",
+            "user_data"
+          ],
+          "matches_any_substrate": [],
+          "emits_obligation": "enforce_google_oauth_identity_guard"
+        }
+      ],
+      "scenarios": [
+        "Reject unauthenticated task mutations"
+      ],
+      "spec_digest": "04f1cf3682e56b3db485a3e0accd3c19a7fa8c9f24dcd32eb5393a93d3c03b4f"
+    },
+    "native:priority-decay": {
+      "id": "native:priority-decay",
+      "title": "Real-time Urgency Scoring Kernel (@native Code Escape Hatch)",
+      "spec_path": "specs/features/003-priority-scoring.feature",
+      "kind": {
+        "native_cell": {
+          "source_path": "src/native_priority.rs",
+          "entrypoint": "compute_urgency_score"
+        }
+      },
+      "stratum": "L0Domain",
+      "lifecycle": {
+        "state": "GA"
+      },
+      "ontology_tags": [
+        "read_query"
+      ],
+      "substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "quantifiers": [],
+      "scenarios": [
+        "Urgency score is strictly monotonic with respect to priority weight and hours overdue."
+      ],
+      "spec_digest": "d5bb12ba53ddf3e406b9e3efc29f8b009dedd4f352e8547b1f496110ba1476cb"
+    }
+  },
+  "cells": {
+    "I(cap:cli-ux-shell ∩ feat:recurring-tasks)": {
+      "coordinate": "I(cap:cli-ux-shell ∩ feat:recurring-tasks)",
+      "features": [
+        "cap:cli-ux-shell",
+        "feat:recurring-tasks"
+      ],
+      "derivation_reason": "Quantifier in 'cap:cli-ux-shell' matched 'feat:recurring-tasks' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:cli-ux-shell ∩ feat:todo-crud ∩ native:priority-decay)": {
+      "coordinate": "I(cap:cli-ux-shell ∩ feat:todo-crud ∩ native:priority-decay)",
+      "features": [
+        "cap:cli-ux-shell",
+        "feat:todo-crud",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::render_viewport_board`)",
+      "shared_substrates": [],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:cli-ux-shell ∩ feat:todo-crud)": {
+      "coordinate": "I(cap:cli-ux-shell ∩ feat:todo-crud)",
+      "features": [
+        "cap:cli-ux-shell",
+        "feat:todo-crud"
+      ],
+      "derivation_reason": "Quantifier in 'cap:cli-ux-shell' matched 'feat:todo-crud' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:cli-ux-shell ∩ mkt:google-login)": {
+      "coordinate": "I(cap:cli-ux-shell ∩ mkt:google-login)",
+      "features": [
+        "cap:cli-ux-shell",
+        "mkt:google-login"
+      ],
+      "derivation_reason": "Quantifier in 'cap:cli-ux-shell' matched 'mkt:google-login' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:cli-ux-shell ∩ native:priority-decay)": {
+      "coordinate": "I(cap:cli-ux-shell ∩ native:priority-decay)",
+      "features": [
+        "cap:cli-ux-shell",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Quantifier in 'cap:cli-ux-shell' matched 'native:priority-decay' on tags [] -> obligation 'enforce_viewport_ux_choreography'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:cli-ux-shell)": {
+      "coordinate": "I(cap:cli-ux-shell)",
+      "features": [
+        "cap:cli-ux-shell"
+      ],
+      "derivation_reason": "Basis self-slice [L2 (UX & Platform Projection)]",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)": {
+      "coordinate": "I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)",
+      "features": [
+        "cap:fast-cache-sla",
+        "cap:gdpr-privacy",
+        "feat:todo-crud"
+      ],
+      "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::gdpr_erase_and_export`)",
+      "shared_substrates": [],
+      "applied_pins": [
+        "PARETO-001-cache-vs-gdpr"
+      ],
+      "incident_guards": []
+    },
+    "I(cap:fast-cache-sla ∩ cap:gdpr-privacy)": {
+      "coordinate": "I(cap:fast-cache-sla ∩ cap:gdpr-privacy)",
+      "features": [
+        "cap:fast-cache-sla",
+        "cap:gdpr-privacy"
+      ],
+      "derivation_reason": "Quantifier in 'cap:fast-cache-sla' matched 'cap:gdpr-privacy' on tags [] -> obligation 'enforce_sub25ms_read_cache'",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
+      "applied_pins": [
+        "PARETO-001-cache-vs-gdpr"
+      ],
+      "incident_guards": []
+    },
+    "I(cap:fast-cache-sla ∩ feat:recurring-tasks)": {
+      "coordinate": "I(cap:fast-cache-sla ∩ feat:recurring-tasks)",
+      "features": [
+        "cap:fast-cache-sla",
+        "feat:recurring-tasks"
+      ],
+      "derivation_reason": "Quantifier in 'cap:fast-cache-sla' matched 'feat:recurring-tasks' on tags [] -> obligation 'enforce_sub25ms_read_cache'",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:fast-cache-sla ∩ feat:todo-crud ∩ native:priority-decay)": {
+      "coordinate": "I(cap:fast-cache-sla ∩ feat:todo-crud ∩ native:priority-decay)",
+      "features": [
+        "cap:fast-cache-sla",
+        "feat:todo-crud",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Joint Multi-Cell Fused implementation span (`TodoStore::list_todos_sorted`)",
+      "shared_substrates": [],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:fast-cache-sla ∩ feat:todo-crud)": {
+      "coordinate": "I(cap:fast-cache-sla ∩ feat:todo-crud)",
+      "features": [
+        "cap:fast-cache-sla",
+        "feat:todo-crud"
+      ],
+      "derivation_reason": "Quantifier in 'cap:fast-cache-sla' matched 'feat:todo-crud' on tags [\"read_query\"] -> obligation 'enforce_sub25ms_read_cache'",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:fast-cache-sla ∩ native:priority-decay)": {
+      "coordinate": "I(cap:fast-cache-sla ∩ native:priority-decay)",
+      "features": [
+        "cap:fast-cache-sla",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Quantifier in 'cap:fast-cache-sla' matched 'native:priority-decay' on tags [\"read_query\"] -> obligation 'enforce_sub25ms_read_cache'",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:fast-cache-sla)": {
+      "coordinate": "I(cap:fast-cache-sla)",
+      "features": [
+        "cap:fast-cache-sla"
+      ],
+      "derivation_reason": "Basis self-slice [L3 (Operational Envelope)]",
+      "shared_substrates": [
+        "Budget:Latency25ms",
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:gdpr-privacy ∩ feat:recurring-tasks)": {
+      "coordinate": "I(cap:gdpr-privacy ∩ feat:recurring-tasks)",
+      "features": [
+        "cap:gdpr-privacy",
+        "feat:recurring-tasks"
+      ],
+      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\"}",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:gdpr-privacy ∩ feat:todo-crud)": {
+      "coordinate": "I(cap:gdpr-privacy ∩ feat:todo-crud)",
+      "features": [
+        "cap:gdpr-privacy",
+        "feat:todo-crud"
+      ],
+      "derivation_reason": "Quantifier in 'cap:gdpr-privacy' matched 'feat:todo-crud' on tags [\"pii\", \"user_data\"] -> obligation 'enforce_gdpr_erasure_and_export'",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:gdpr-privacy ∩ native:priority-decay)": {
+      "coordinate": "I(cap:gdpr-privacy ∩ native:priority-decay)",
+      "features": [
+        "cap:gdpr-privacy",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\"}",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(cap:gdpr-privacy)": {
+      "coordinate": "I(cap:gdpr-privacy)",
+      "features": [
+        "cap:gdpr-privacy"
+      ],
+      "derivation_reason": "Basis self-slice [L1 (Policy & Compliance)]",
+      "shared_substrates": [
+        "DBTable:todos"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(feat:recurring-tasks ∩ feat:todo-crud)": {
+      "coordinate": "I(feat:recurring-tasks ∩ feat:todo-crud)",
+      "features": [
+        "feat:recurring-tasks",
+        "feat:todo-crud"
+      ],
+      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [
+        "EXC-002-crud-vs-recurring"
+      ],
+      "incident_guards": [
+        "INC-001-double-complete-spawn"
+      ]
+    },
+    "I(feat:recurring-tasks ∩ mkt:google-login)": {
+      "coordinate": "I(feat:recurring-tasks ∩ mkt:google-login)",
+      "features": [
+        "feat:recurring-tasks",
+        "mkt:google-login"
+      ],
+      "derivation_reason": "Quantifier in 'mkt:google-login' matched 'feat:recurring-tasks' on tags [\"mutable_state\"] -> obligation 'enforce_google_oauth_identity_guard'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(feat:recurring-tasks ∩ native:priority-decay)": {
+      "coordinate": "I(feat:recurring-tasks ∩ native:priority-decay)",
+      "features": [
+        "feat:recurring-tasks",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(feat:recurring-tasks)": {
+      "coordinate": "I(feat:recurring-tasks)",
+      "features": [
+        "feat:recurring-tasks"
+      ],
+      "derivation_reason": "Basis self-slice [L0 (Domain Behavior)]",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(feat:todo-crud ∩ mkt:google-login)": {
+      "coordinate": "I(feat:todo-crud ∩ mkt:google-login)",
+      "features": [
+        "feat:todo-crud",
+        "mkt:google-login"
+      ],
+      "derivation_reason": "Quantifier in 'mkt:google-login' matched 'feat:todo-crud' on tags [\"mutable_state\", \"pii\", \"user_data\"] -> obligation 'enforce_google_oauth_identity_guard'",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(feat:todo-crud ∩ native:priority-decay)": {
+      "coordinate": "I(feat:todo-crud ∩ native:priority-decay)",
+      "features": [
+        "feat:todo-crud",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Shared physical substrate coupling: {\"DBTable:todos\", \"Viewport:TodoList\"}",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(feat:todo-crud)": {
+      "coordinate": "I(feat:todo-crud)",
+      "features": [
+        "feat:todo-crud"
+      ],
+      "derivation_reason": "Basis self-slice [L0 (Domain Behavior)]",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(mkt:google-login ∩ native:priority-decay)": {
+      "coordinate": "I(mkt:google-login ∩ native:priority-decay)",
+      "features": [
+        "mkt:google-login",
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Shared physical substrate coupling: {\"Viewport:TodoList\"}",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(mkt:google-login)": {
+      "coordinate": "I(mkt:google-login)",
+      "features": [
+        "mkt:google-login"
+      ],
+      "derivation_reason": "Basis self-slice [L1 (Policy & Compliance)]",
+      "shared_substrates": [
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    },
+    "I(native:priority-decay)": {
+      "coordinate": "I(native:priority-decay)",
+      "features": [
+        "native:priority-decay"
+      ],
+      "derivation_reason": "Basis self-slice [L0 (Domain Behavior)]",
+      "shared_substrates": [
+        "DBTable:todos",
+        "Viewport:TodoList"
+      ],
+      "applied_pins": [],
+      "incident_guards": []
+    }
+  },
+  "exceptions": {
+    "EXC-002-crud-vs-recurring": {
+      "id": "EXC-002-crud-vs-recurring",
+      "features": [
+        "feat:recurring-tasks",
+        "feat:todo-crud"
+      ],
+      "conflict_summary": "Both 'Users can create, list, and complete todo tasks' and 'Recurring tasks automatically spawn the next occurrence upon completion' mutate shared substrate [\"DBTable:todos\", \"Viewport:TodoList\"].",
+      "options": [
+        {
+          "option_id": "OPT-ATOMIC-COMPLETE-AND-SPAWN",
+          "label": "Atomic Complete & Spawn Next Cycle in Single Fused Mutation",
+          "business_impact": "Completing a recurring task immediately shows the newly scheduled next occurrence in the same list refresh.",
+          "estimated_cost_or_latency": "0ms extra round-trip"
+        }
+      ],
+      "chosen_option": "OPT-ATOMIC-COMPLETE-AND-SPAWN",
+      "resolution_directive": "Fuse recurring task roll-forward directly inside the task completion transaction when recurrence_days is present AND the canary flag `flag_recurring_tasks` is enabled."
+    },
+    "PARETO-001-cache-vs-gdpr": {
+      "id": "PARETO-001-cache-vs-gdpr",
+      "features": [
+        "cap:fast-cache-sla",
+        "cap:gdpr-privacy"
+      ],
+      "conflict_summary": "PACELC Tradeoff between 'Sub-25ms Read Latency SLA via Write-Through Memory Cache' (<25ms cached reads) and 'EU Privacy Safe (GDPR Right to Erasure & Portability)' (0ms stale PII after erasure).",
+      "options": [
+        {
+          "option_id": "OPT-SYNCHRONOUS-INVALIDATION",
+          "label": "Write-Through Cache Purge on GDPR Erase (Recommended)",
+          "business_impact": "Normal Todo reads stay fast (<2ms via in-memory cache); GDPR erasure synchronously zeroes the cache before returning.",
+          "estimated_cost_or_latency": "Read p99: 1.2ms | Erase p99: 4.5ms"
+        },
+        {
+          "option_id": "OPT-NO-CACHE-STRICT",
+          "label": "Disable Read Caching for PII Entities",
+          "business_impact": "Guaranteed zero cache lag, but list queries hit primary storage on every view.",
+          "estimated_cost_or_latency": "Read p99: 18ms | Erase p99: 2.0ms"
+        }
+      ],
+      "chosen_option": "OPT-SYNCHRONOUS-INVALIDATION",
+      "resolution_directive": "Maintain in-memory read cache for sub-25ms reads, but execute synchronous cache key eviction inside the atomic GDPR erasure transaction before returning."
+    }
+  },
+  "incidents": {
+    "INC-001-double-complete-spawn": {
+      "id": "INC-001-double-complete-spawn",
+      "title": "Double-clicking Complete on a recurring task spawned two duplicate future tasks",
+      "affected_features": [
+        "feat:recurring-tasks",
+        "feat:todo-crud"
+      ],
+      "what_happened": "At 03:12 UTC, a mobile client sent two concurrent complete_todo(#42) requests during a network retry. Both saw recurrence_days=7 and spawned two duplicate future tasks.",
+      "stage": {
+        "stage": "lifted_invariant",
+        "negative_invariant": "Completing an already-Completed task must be an idempotent no-op and must NEVER spawn a second recurring task instance.",
+        "regression_test_name": "test_inc_001_idempotent_complete_never_spawns_duplicate_recurrence"
+      }
+    }
+  },
+  "code_spans": [
+    {
+      "file_path": "src/lib.rs",
+      "symbol": "AuthSession",
+      "cell_coordinate": "I(mkt:google-login)",
+      "start_line": 13,
+      "end_line": 39,
+      "content_sha256": "89339da82c680eae81e179130723ddc89a9c4206ae526c4bf63a39f20182d625",
+      "verification_tests": [
+        "test_google_oauth_rejects_unauthenticated_mutations"
+      ]
+    },
+    {
+      "file_path": "src/lib.rs",
+      "symbol": "TodoItem",
+      "cell_coordinate": "I(feat:todo-crud)",
+      "start_line": 41,
+      "end_line": 59,
+      "content_sha256": "dd0189b1d5adbeef43df7c07ba81799ffb38d8b711ea027f41e77513753e14d9",
+      "verification_tests": [
+        "test_create_and_complete_todo"
+      ]
+    },
+    {
+      "file_path": "src/lib.rs",
+      "symbol": "TodoStore::create_todo",
+      "cell_coordinate": "I(feat:todo-crud ∩ mkt:google-login)",
+      "start_line": 61,
+      "end_line": 111,
+      "content_sha256": "d339c9d5f8eb97228c51be558df02e5663f3cc2595df731d35f3848fb97f3630",
+      "verification_tests": [
+        "test_create_and_complete_todo",
+        "test_google_oauth_rejects_unauthenticated_mutations"
+      ]
+    },
+    {
+      "file_path": "src/lib.rs",
+      "symbol": "TodoStore::complete_todo",
+      "cell_coordinate": "I(feat:recurring-tasks ∩ feat:todo-crud)",
+      "start_line": 113,
+      "end_line": 169,
+      "content_sha256": "a08e8fbd8ab289381f1e9a36ea57a35472d1632f786d2d7d0080e0e8dfb04ee9",
+      "verification_tests": [
+        "test_recurring_task_spawns_next_cycle",
+        "test_inc_001_idempotent_complete_never_spawns_duplicate_recurrence"
+      ]
+    },
+    {
+      "file_path": "src/lib.rs",
+      "symbol": "TodoStore::list_todos_sorted",
+      "cell_coordinate": "I(cap:fast-cache-sla ∩ feat:todo-crud ∩ native:priority-decay)",
+      "start_line": 171,
+      "end_line": 205,
+      "content_sha256": "7b459a6a4931abfbc7c330417e8ff5269d6e5fa1406d9276601f9100eed39473",
+      "verification_tests": [
+        "test_cached_list_sorted_by_native_urgency"
+      ]
+    },
+    {
+      "file_path": "src/lib.rs",
+      "symbol": "TodoStore::gdpr_erase_and_export",
+      "cell_coordinate": "I(cap:fast-cache-sla ∩ cap:gdpr-privacy ∩ feat:todo-crud)",
+      "start_line": 207,
+      "end_line": 236,
+      "content_sha256": "1f47ef9915fd1d814e99d32cec3472e72a0fc14306ecfa5337e35beead98e542",
+      "verification_tests": [
+        "test_gdpr_erasure_wipes_storage_and_cache_synchronously"
+      ]
+    },
+    {
+      "file_path": "src/lib.rs",
+      "symbol": "TodoStore::render_viewport_board",
+      "cell_coordinate": "I(cap:cli-ux-shell ∩ feat:todo-crud ∩ native:priority-decay)",
+      "start_line": 238,
+      "end_line": 272,
+      "content_sha256": "ad2eb79240aebf3885a85b6f4f9dec4becdde37785b563a3a91d9fcb82f7bb44",
+      "verification_tests": [
+        "test_render_viewport_board_formats_badges"
+      ]
+    },
+    {
+      "file_path": "src/native_priority.rs",
+      "symbol": "compute_urgency_score",
+      "cell_coordinate": "I(native:priority-decay)",
+      "start_line": 6,
+      "end_line": 22,
+      "content_sha256": "95c56f519978c9420883191df8ea67229245c99ea560bf1b5cdbf511dc8375a4",
+      "verification_tests": [
+        "test_native_urgency_monotonicity"
+      ]
+    }
+  ]
+}
